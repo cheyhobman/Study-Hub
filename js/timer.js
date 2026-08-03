@@ -1,5 +1,5 @@
 /* ============================================================================
-   timer.js — "Practice under exam conditions" countdown.
+   timer.js: "Practice under exam conditions" countdown.
    ----------------------------------------------------------------------------
    Opens a past paper AND starts a floating countdown matching that standard's
    real exam length, so practice sessions are properly timed.
@@ -67,7 +67,7 @@ export function startExamTimer({ label, minutes }) {
       timeEl.textContent = '00:00';
       fillEl.style.width = '100%';
       el.classList.add('is-done');
-      noteEl.textContent = '⏰ Time is up — pens down!';
+      noteEl.textContent = '⏰ Time is up: pens down!';
       clearInterval(active.interval);
       try {  // a gentle two-tone chime; silently ignored if audio is blocked
         const ctx = new (window.AudioContext || window.webkitAudioContext)();

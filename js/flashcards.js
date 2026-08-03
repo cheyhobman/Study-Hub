@@ -1,10 +1,10 @@
 /* ============================================================================
-   flashcards.js — flip-card revision with a Leitner spaced-repetition system.
+   flashcards.js: flip-card revision with a Leitner spaced-repetition system.
    ----------------------------------------------------------------------------
    Cards are plain data: { q, a, explain }
-     q       — the prompt (front)
-     a       — the short answer (back)
-     explain — fuller reasoning, revealed by the optional "Explain this answer"
+     q, the prompt (front)
+     a, the short answer (back)
+     explain, fuller reasoning, revealed by the optional "Explain this answer"
                expander so the answer side stays clean and scannable.
 
    LEITNER SYSTEM (simple spaced repetition)
@@ -84,14 +84,14 @@ export function mountFlashcards(root, { cards, deckId }) {
           <div class="flex items-center gap-3 wrap">
             <span class="badge">Flashcards</span>
             <span class="fc-count-badge">${cards.length} in deck · ${reviewingAll ? 'reviewing all' : queue.length + ' due today'}</span>
-            <span class="fc-box-pill" title="Leitner box — higher means you know it better">Box ${boxOf(i)}</span>
+            <span class="fc-box-pill" title="Leitner box: higher means you know it better">Box ${boxOf(i)}</span>
           </div>
           <span class="fc-progress">Card ${pos + 1} of ${queue.length}</span>
         </div>
 
         <div class="fc-scene">
           <div class="fc-card ${flipped ? 'flipped' : ''}" id="fc-card" role="button" tabindex="0"
-               aria-label="Flashcard — click to reveal the answer">
+               aria-label="Flashcard: click to reveal the answer">
             <div class="fc-face fc-front">
               <span class="fc-tag">Question</span>
               <div class="fc-q">${card.q}</div>
@@ -103,7 +103,7 @@ export function mountFlashcards(root, { cards, deckId }) {
                 <div class="fc-a">${card.a}</div>
                 ${card.explain ? `
                   <details class="fc-explain-toggle">
-                    <summary>💡 Explain this answer</summary>
+                    <summary>Explain this answer</summary>
                     <div class="fc-explain-body">${card.explain}</div>
                   </details>` : ''}
               </div>
@@ -115,16 +115,16 @@ export function mountFlashcards(root, { cards, deckId }) {
         <div class="fc-controls">
           ${flipped ? `
             <div class="fc-grade">
-              <button class="btn btn-ghost btn-sm fc-dunno"  id="fc-back-dunno">🤷 Didn't know</button>
+              <button class="btn btn-ghost btn-sm fc-dunno"  id="fc-back-dunno">Didn't know</button>
               <button class="btn btn-ghost btn-sm fc-wrong"  id="fc-no">✗ Got it wrong</button>
               <button class="btn btn-ghost btn-sm fc-nearly" id="fc-nearly">◐ Nearly</button>
               <button class="btn btn-primary btn-sm"         id="fc-yes">✓ Got it right</button>
             </div>
-            <span class="xs muted"><strong>Nearly</strong> = right idea, missed a detail — the card holds its box. <em>Didn't know</em> and <em>Got it wrong</em> both send it back to Box 1.</span>` : `
+            <span class="xs muted"><strong>Nearly</strong> = right idea, missed a detail: the card holds its box. <em>Didn't know</em> and <em>Got it wrong</em> both send it back to Box 1.</span>` : `
             <div class="fc-nav">
-              <button class="btn btn-ghost btn-sm fc-dunno" id="fc-dunno">🤷 I don't know</button>
+              <button class="btn btn-ghost btn-sm fc-dunno" id="fc-dunno">I don't know</button>
             </div>
-            <span class="xs muted">Try to answer before you flip — that effort is what makes it stick.</span>`}
+            <span class="xs muted">Try to answer before you flip: that effort is what makes it stick.</span>`}
         </div>
       </div>`;
 
@@ -159,7 +159,7 @@ export function mountFlashcards(root, { cards, deckId }) {
       flipped = true; render();
       const el = root.querySelector('.fc-scene');
       if (el) el.insertAdjacentHTML('afterbegin',
-        '<p class="dunno-note">🤷 Marked as not known — this card drops to Box 1 and will come back soon.</p>');
+        '<p class="dunno-note">Marked as not known. This card drops to Box 1 and will come back soon.</p>');
       const no = root.querySelector('#fc-no');
       if (no) no.focus({ preventScroll: true });
     });

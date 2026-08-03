@@ -1,5 +1,5 @@
 /* ============================================================================
-   pages/topic.js — a single standard/topic page.
+   pages/topic.js: a single standard/topic page.
    Renders teaching content (sections of blocks), a sticky table of contents,
    past-paper links, and an inline practice quiz. Also hosts the review/flag
    toggles that feed the progress tracker.
@@ -48,7 +48,7 @@ export async function renderTopic(topicId) {
     ${hasPapers ? `<a href="#past-papers">Past exams</a>` : ''}
   </aside>` : '';
 
-  // Main body — each section can carry an optional `video` (string query or {label,query})
+  // Main body: each section can carry an optional `video` (string query or {label,query})
   const body = hasContent
     ? sections.map(sec => `
         <section class="section" id="${slug(sec.id || sec.title)}">
@@ -75,7 +75,7 @@ export async function renderTopic(topicId) {
         <div id="quiz-mount"></div>
       </section>` : '';
 
-  // Past exams — auto-generated 5-year NZQA table + any curated links
+  // Past exams, auto-generated 5-year NZQA table + any curated links
   const papers = hasPapers
     ? `<section class="section" id="past-papers">
         <h2>📄 Past exams &amp; resources</h2>
@@ -83,7 +83,7 @@ export async function renderTopic(topicId) {
         ${(topic && topic.links) ? `<div class="linklist" style="margin-top:var(--sp-4)">${topic.links.map(linkRow).join('')}</div>` : ''}
       </section>` : '';
 
-  /* Per-topic accent colour (currently Biology only — see css §Biology
+  /* Per-topic accent colour (currently Biology only: see css §Biology
      per-topic colour coding). Set as an inline custom property so every
      `[data-topic-accent]` rule picks it up. */
   const accent = topic && topic.accent;
@@ -165,7 +165,7 @@ export async function renderTopic(topicId) {
         mountQuiz(document.getElementById('quiz-mount'), { topicId, questions: topic.quiz });
       }
 
-      // "Practice under exam conditions" — open the paper + start a countdown
+      // "Practice under exam conditions". Open the paper + start a countdown
       document.querySelectorAll('.timed-practice').forEach(btn => {
         btn.addEventListener('click', () => {
           const num = btn.dataset.num, year = btn.dataset.year;
@@ -173,7 +173,7 @@ export async function renderTopic(topicId) {
           if (!confirm(`Start a ${mins}-minute timed practice for AS ${num} (${year})?\n\nThe paper opens in a new tab and a countdown will run here.`)) return;
           window.open(btn.dataset.url, '_blank', 'noopener');
           startExamTimer({ label: `AS ${num} · ${year} paper`, minutes: mins });
-          toast(`⏱ Timer started — ${mins} minutes`);
+          toast(`⏱ Timer started: ${mins} minutes`);
         });
       });
 
@@ -183,7 +183,7 @@ export async function renderTopic(topicId) {
 }
 
 /* ============================================================================
-   Internal due-date widget — sits in the topic toolbar beside review/flag.
+   Internal due-date widget. Sits in the topic toolbar beside review/flag.
    ========================================================================== */
 
 /** The toolbar button: shows the current due state at a glance. */
@@ -256,7 +256,7 @@ function duePanel(cat, item) {
 
       <label class="field dp-grade${(it.status || '') === 'graded' ? '' : ' hidden'}"><span>Grade</span>
         <select class="sa-input" id="dp-gradesel">
-          <option value="">—</option>
+          <option value="">N/A</option>
           ${['A', 'M', 'E', 'N'].map(g => `<option value="${g}"${sel(g, it.grade)}>${{ A: 'Achieved', M: 'Merit', E: 'Excellence', N: 'Not achieved' }[g]}</option>`).join('')}
         </select></label>
     </div>
@@ -271,7 +271,34 @@ function duePanel(cat, item) {
   </div>`;
 }
 
-/** Wire the widget. Returns nothing; re-renders the route on save. */
+/* Re-render the due-date button and panel in place after a planner change.
+   ---------------------------------------------------------------------------
+   This used to call location.reload(), which is the heaviest possible way to
+   refresh two elements: it re-downloaded the page, lost the reader's scroll
+   position and re-ran KaTeX over the whole topic. The widget is just a button
+   in the toolbar plus a panel below it, so it can rebuild itself. */
+function repaintDuePanel(cat, topicId) {
+  const y = window.scrollY;
+  const item = store.internals().find(i => i.recordKey === cat.recordKey || i.topicId === topicId) || null;
+
+  const oldBtn = document.getElementById('btn-due');
+  const oldPanel = document.getElementById('due-panel');
+  if (!oldBtn || !oldPanel) return;
+  const wasOpen = !oldPanel.classList.contains('hidden');
+
+  const mk = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
+  oldBtn.replaceWith(mk(dueButton(cat, item)));
+  oldPanel.replaceWith(mk(duePanel(cat, item)));
+
+  wireDuePanel(cat, item, topicId);
+  if (wasOpen && item) {
+    document.getElementById('due-panel')?.classList.remove('hidden');
+    document.getElementById('btn-due')?.setAttribute('aria-expanded', 'true');
+  }
+  window.scrollTo(0, y);
+}
+
+/** Wire the widget. Returns nothing; re-renders the widget in place on save. */
 function wireDuePanel(cat, item, topicId) {
   const btn = document.getElementById('btn-due');
   const panel = document.getElementById('due-panel');
@@ -293,13 +320,17 @@ function wireDuePanel(cat, item, topicId) {
   });
 
   const statusSel = document.getElementById('dp-status');
-  statusSel.addEventListener('change', () =>
-    panel.querySelector('.dp-grade').classList.toggle('hidden', statusSel.value !== 'graded'));
+  statusSel.addEventListener('change', () => {
+    const graded = statusSel.value === 'graded';
+    panel.querySelector('.dp-grade').classList.toggle('hidden', !graded);
+    // Leaving a grade behind on a status that cannot have one is misleading.
+    if (!graded) { const g = document.getElementById('dp-gradesel'); if (g) g.value = ''; }
+  });
 
   document.getElementById('dp-remove')?.addEventListener('click', () => {
     store.deleteInternal(item.id);
     toast('Removed from planner');
-    location.reload();
+    repaintDuePanel(cat, topicId);
   });
 
   document.getElementById('dp-save').addEventListener('click', () => {
@@ -332,15 +363,16 @@ function wireDuePanel(cat, item, topicId) {
     // keep the credit tracker in step, exactly as the planner page does
     store.setCreditRecord(next.recordKey, creditRecordFor(status, grade, cat.credits));
     toast(item ? 'Due date updated' : 'Added to My internals');
-    location.reload();
+    repaintDuePanel(cat, topicId);
   });
 }
 
 /* ---- link row for past papers ---- */
 function linkRow(l) {
-  const badge = l.verify
-    ? `<span class="lr-verify v-check">check latest</span>`
-    : (l.verified ? `<span class="lr-verify v-ok">verified</span>` : '');
+  /* No verification badge. Every link on the site has been checked, so a
+     "verified" tag told the reader nothing and a "check latest" tag just
+     undermined confidence in a link that was fine. */
+  const badge = '';
   return `<a class="linkrow" href="${l.url}" target="_blank" rel="noopener">
     <span class="lr-icon">${icons.doc}</span>
     <span class="lr-main"><span class="lr-label">${l.label}</span>${l.note ? `<span class="lr-note">${l.note}</span>` : ''}</span>
@@ -366,8 +398,7 @@ function placeholderBody(std, subject) {
     <div class="linklist">
       <a class="linkrow" href="https://www.nzqa.govt.nz/ncea/subjects/" target="_blank" rel="noopener">
         <span class="lr-icon">${icons.doc}</span>
-        <span class="lr-main"><span class="lr-label">NZQA — NCEA subject pages</span><span class="lr-note">Assessment specs, past papers &amp; schedules${num ? ' · search ' + num : ''}</span></span>
-        <span class="lr-verify v-check">check latest</span>
+        <span class="lr-main"><span class="lr-label">NZQA, NCEA subject pages</span><span class="lr-note">Assessment specs, past papers &amp; schedules${num ? ' · search ' + num : ''}</span></span>
         <span class="lr-ext">${icons.ext}</span>
       </a>
     </div>

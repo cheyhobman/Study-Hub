@@ -1,15 +1,15 @@
 /* ============================================================================
-   deadlines.js — one merged, date-ordered view of everything you have coming.
+   deadlines.js: one merged, date-ordered view of everything you have coming.
    ----------------------------------------------------------------------------
    Three separate things count as a deadline, and until now they lived in three
    different places:
 
-     • internals — from the planner (localStorage, user-entered dates)
-     • derived   — the school's derived-grade / trial exams (Sept 2026)
-     • external  — the real NCEA externals (Nov 2026)
+     • internals, from the planner (localStorage, user-entered dates)
+     • derived, the school's derived-grade / trial exams (Sept 2026)
+     • external, the real NCEA externals (Nov 2026)
 
    The dashboard used to show only externals, which meant the September derived
-   exams — the NEAREST assessments of the lot — never appeared anywhere on the
+   exams, the NEAREST assessments of the lot, never appeared anywhere on the
    home page. This module merges all three so "what's coming" means it.
 
    Every item is normalised to the same shape:
@@ -41,8 +41,8 @@ function fmt(iso) {
 /**
  * Every upcoming deadline, newest-first, already normalised.
  * @param {object} opts
- *   kinds     — array of kinds to include (default: all three)
- *   graceDays — how far into the past to keep showing something (default 21)
+ *   kinds, array of kinds to include (default: all three)
+ *   graceDays, how far into the past to keep showing something (default 21)
  */
 export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'], graceDays = 21 } = {}) {
   const out = [];
@@ -51,7 +51,7 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
     sortByDue(store.internals().filter(i => i.status !== 'graded')).forEach(i => {
       const d = describeDate(i);
       const days = daysUntilItem(i);
-      if (days === null) return;                    // undated — can't be ranked (see undatedInternals)
+      if (days === null) return;                    // undated, can't be ranked (see undatedInternals)
       out.push({
         kind: 'internal', subject: i.subject, name: i.title, code: i.code,
         days, dateText: d.text, approx: d.approx, span: d.span,
@@ -85,7 +85,7 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
     .sort((a, b) => a.days - b.days);
 }
 
-/** Planner internals with no date yet — surfaced separately, since they can't be ranked. */
+/** Planner internals with no date yet. Surfaced separately, since they can't be ranked. */
 export function undatedInternals() {
   return store.internals().filter(i => i.status !== 'graded' && daysUntilItem(i) === null);
 }

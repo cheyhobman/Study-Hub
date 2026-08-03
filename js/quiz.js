@@ -1,5 +1,5 @@
 /* ============================================================================
-   quiz.js — self-testing engine with instant feedback.
+   quiz.js: self-testing engine with instant feedback.
    ----------------------------------------------------------------------------
    Questions are plain data (stored per-topic in the content files):
 
@@ -63,7 +63,7 @@ export function mountQuiz(root, { topicId, questions }) {
       <div class="quiz-explain" id="q-explain"></div>
       <div class="quiz-foot">
         <span class="xs muted">Score: <b id="q-score">${score}</b></span>
-        <button class="btn btn-ghost btn-sm" id="q-dunno">🤷 I don't know</button>
+        <button class="btn btn-ghost btn-sm" id="q-dunno">I don't know</button>
         <button class="btn btn-primary hidden" id="q-next">Next question →</button>
       </div>`;
     q.type === 'sa' ? renderSA(q) : renderMC(q);
@@ -138,7 +138,7 @@ export function mountQuiz(root, { topicId, questions }) {
     if (correct) { score++; box.querySelector('#q-score').textContent = score; }
     box.querySelector('#q-dunno')?.classList.add('hidden');
     const ex = box.querySelector('#q-explain');
-    ex.innerHTML = `<b>${correct ? '✓ Correct.' : dunno ? '🤷 No worries — here it is.' : '✗ Not quite.'}</b> ${q.answer && q.type === 'sa' ? `Answer: <b>${q.answer}</b>. ` : ''}${q.explanation || ''}`;
+    ex.innerHTML = `<b>${correct ? '✓ Correct.' : dunno ? 'No worries: here it is.' : '✗ Not quite.'}</b> ${q.answer && q.type === 'sa' ? `Answer: <b>${q.answer}</b>. ` : ''}${q.explanation || ''}`;
     ex.classList.add('show');
 
     const next = box.querySelector('#q-next');
@@ -154,9 +154,9 @@ export function mountQuiz(root, { topicId, questions }) {
   function showResult() {
     store.saveQuiz(topicId, score, deck.length);
     const pct = Math.round((score / deck.length) * 100);
-    const msg = pct === 100 ? 'Perfect — you have this nailed.'
+    const msg = pct === 100 ? 'Perfect: you have this nailed.'
       : pct >= 75 ? 'Strong. A couple to firm up.'
-      : pct >= 50 ? 'Getting there — worth another review.'
+      : pct >= 50 ? 'Getting there: worth another review.'
       : 'Flag this topic and come back to it.';
     box.innerHTML = `
       <div class="quiz-result">
@@ -165,6 +165,6 @@ export function mountQuiz(root, { topicId, questions }) {
         <button class="btn btn-ghost" id="q-restart">↻ Try again</button>
       </div>`;
     box.querySelector('#q-restart').addEventListener('click', () => { deck = buildDeck(questions); i = 0; score = 0; render(); });
-    if (pct === 100) toast('Quiz complete — 100%! 🎉');
+    if (pct === 100) toast('Quiz complete: 100%');
   }
 }

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Calculus — condensed formula & quick-reference sheet (printable)
+   Calculus, condensed formula & quick-reference sheet (printable)
    ========================================================================== */
 export default {
   intro: 'Rules, standard derivatives and integrals, and the complex-number toolkit, condensed for revision.',

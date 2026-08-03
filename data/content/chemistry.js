@@ -1,5 +1,5 @@
 /* ============================================================================
-   Chemistry — content module (PRIORITY SUBJECT, built in most depth).
+   Chemistry: content module (PRIORITY SUBJECT, built in most depth).
    ----------------------------------------------------------------------------
    Each standard's teaching content lives in its own file under chemistry/ so
    they're easy to find and edit. This file just wires topicId → content.

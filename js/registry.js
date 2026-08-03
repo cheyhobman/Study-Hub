@@ -1,9 +1,9 @@
 /* ============================================================================
-   registry.js — bridges the structure (subjects.js) with the teaching content
+   registry.js, bridges the structure (subjects.js) with the teaching content
    (data/content/<subject>.js), and builds the global search index.
    ----------------------------------------------------------------------------
    Content modules are loaded lazily (dynamic import) so the app boots fast and
-   still works even if a subject's content file doesn't exist yet — the topic
+   still works even if a subject's content file doesn't exist yet: the topic
    simply renders a "coming soon" placeholder.
    ========================================================================== */
 
@@ -11,6 +11,7 @@ import { subjects, allStandards, standardByTopicId, subjectById } from '../data/
 import { exams, externalExams, derivedExams } from '../data/exams.js';
 import { results } from '../data/results.js';
 import { stripHtml } from './ui.js';
+import { store } from './store.js';
 
 export { subjects, allStandards, standardByTopicId, subjectById, exams, externalExams, derivedExams };
 
@@ -22,7 +23,7 @@ export { subjects, allStandards, standardByTopicId, subjectById, exams, external
    record is not on their timetable, so it stays out of the sidebar, the
    dashboard tiles and the subject count.
 
-   `subjects` (above) remains the COMPLETE list — subjectById, search and direct
+   `subjects` (above) remains the COMPLETE list. SubjectById, search and direct
    topic links keep working for everything, so nothing 404s if a link is shared.
    Only the browsing surfaces narrow. If results.js is emptied entirely we fall
    back to showing all six rather than an empty sidebar. */
@@ -31,7 +32,7 @@ export const enrolledSubjects = (() => {
   const mine = subjects.filter(s => onRecord.has(s.name.toLowerCase()));
   return mine.length ? mine : subjects;
 })();
-/** The standards belonging to the enrolled subjects — so "12 / 13 reviewed"
+/** The standards belonging to the enrolled subjects, so "12 / 13 reviewed"
     counts what this student is actually sitting, not all six subjects.
     Filtered from allStandards (not flatMapped from scratch) so each entry keeps
     its subjectId / subjectName tags. */
@@ -71,7 +72,7 @@ export async function getSubjectContent(subjectId) {
     const mod = await import(`../data/content/${subjectId}.js`);
     contentCache[subjectId] = mod.default || null;
   } catch (e) {
-    contentCache[subjectId] = null; // file not created yet — fine
+    contentCache[subjectId] = null; // file not created yet: fine
   }
   return contentCache[subjectId];
 }
@@ -113,7 +114,7 @@ export async function buildSearchIndex() {
     const content = contentCache[std.subjectId];
     const topic = content && content.topics ? content.topics[std.topicId] : null;
 
-    // gather searchable text from the topic's blocks (be thorough — pull text
+    // gather searchable text from the topic's blocks (be thorough. Pull text
     // from every field a block might carry so search covers all content)
     let body = '';
     if (topic) {
@@ -167,7 +168,7 @@ export async function buildSearchIndex() {
     });
   });
 
-  // Section headings within each topic — so a search can jump straight to
+  // Section headings within each topic, so a search can jump straight to
   // the right part of a long page.
   allStandards.forEach(std => {
     const content = contentCache[std.subjectId];
@@ -198,7 +199,7 @@ export async function buildSearchIndex() {
     });
   });
 
-  // Static / utility pages — previously missing entirely from search
+  // Static / utility pages: previously missing entirely from search
   [
     { title: 'Progress & credits', url: '#/progress', kind: 'Tracker',
       sub: 'Credits, grades, rank score & ATAR',
@@ -233,9 +234,9 @@ export async function search(query, limit = 12) {
 
     for (const tk of tokens) {
       // Three tiers, strongest first:
-      //   exact  — the token IS a whole word      ("pH" in "pH of salt solutions")
-      //   prefix — the token starts a word        ("ph" in "physics")
-      //   sub    — it appears anywhere            ("ph" in "graph")
+      //   exact. The token IS a whole word      ("pH" in "pH of salt solutions")
+      //   prefix: the token starts a word        ("ph" in "physics")
+      //   sub: it appears anywhere            ("ph" in "graph")
       // Without the exact tier, searching "pH" ranked "Physics" top.
       const exact = new RegExp('\\b' + esc(tk) + '\\b', 'i');
       const prefix = new RegExp('\\b' + esc(tk), 'i');
@@ -266,4 +267,47 @@ export async function search(query, limit = 12) {
   }
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit).map(s => s.item);
+}
+
+/* ---- Subject metadata that never returns undefined --------------------------
+   Subjects a student ADDS from the NZQA catalogue (Economics, Te Reo Māori …)
+   are stored on planner items as `x:<GROUP>` and have no entry in
+   data/subjects.js: rather than every caller writing `subjectById[id] || {}`
+   and falling back to one shared accent, this gives added subjects a stable,
+   distinct colour derived from their group code, so two added subjects never
+   look like the same thing on the calendar. */
+export function subjectMeta(id) {
+  if (!id) return { name: '', short: '', dot: 'var(--accent)', icon: '📘' };
+  const known = subjectById[id];
+  if (known) return known;
+
+  const group = String(id).startsWith('x:') ? String(id).slice(2) : String(id);
+  // Deterministic hue from the group code, kept out of the phthalo band (90–160°)
+  // so added subjects read as "not one of the six taught ones".
+  let h = 0;
+  for (let i = 0; i < group.length; i++) h = (h * 31 + group.charCodeAt(i)) % 360;
+  if (h >= 90 && h <= 160) h = (h + 140) % 360;
+  return { name: group, short: group, icon: '📘', dot: `hsl(${h} 45% 45%)` };
+}
+
+/* ---- Subjects actually shown, after the student's own removals -------------
+   `enrolledSubjects` is fixed at import time (it is derived from the shipped
+   record). This is a FUNCTION because removals happen at runtime and every
+   caller needs the current answer, not the one from page load. */
+const GROUP_OF = { chemistry: '13CHE', physics: '13PHY', calculus: '13MAC',
+                   statistics: '13MAS', biology: '13BIO', english: '13ENU' };
+export const groupForSubject = (id) => GROUP_OF[id] || id;
+
+export function visibleSubjects() {
+  const hidden = new Set(store.hiddenStandards());
+  return enrolledSubjects.filter(s => {
+    const g = groupForSubject(s.id);
+    const mine = results.filter(r => r.group === g);
+    // Shown while at least one of its standards survives.
+    return !mine.length || mine.some(r => !hidden.has(`${r.group}:${r.code}`));
+  });
+}
+export function visibleStandards() {
+  const ids = new Set(visibleSubjects().map(s => s.id));
+  return enrolledStandards.filter(std => ids.has(std.subjectId));
 }

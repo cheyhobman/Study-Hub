@@ -1,5 +1,5 @@
 /* ============================================================================
-   Statistics — condensed formula & quick-reference sheet (printable)
+   Statistics, condensed formula & quick-reference sheet (printable)
    ========================================================================== */
 export default {
   intro: 'Key rules and distributions for the three externals, condensed for revision.',

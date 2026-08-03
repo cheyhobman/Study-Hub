@@ -1,5 +1,5 @@
 /* ============================================================================
-   Biology — condensed quick-reference sheet (printable). Concept summaries
+   Biology: condensed quick-reference sheet (printable). Concept summaries
    rather than formulas.
    ========================================================================== */
 export default {
@@ -36,7 +36,7 @@ export default {
           '<li><b>Bipedal evidence</b>: central foramen magnum, S-spine, bowl pelvis, valgus (carrying) angle, arched foot, in-line big toe.</li>' +
           '<li><b>Advantages</b>: free hands, see over grass, energy-efficient, thermoregulation.</li>' +
           '<li><b>Cranial trends</b>: ↑ brain size; ↓ brow ridges, prognathism, teeth/jaw; chin appears.</li>' +
-          '<li><b>Cultural</b>: tools (Oldowan→Acheulean), fire, language, art — fast, learned, not genetic.</li>' +
+          '<li><b>Cultural</b>: tools (Oldowan→Acheulean), fire, language, art: fast, learned, not genetic.</li>' +
         '</ul>' },
       ],
     },

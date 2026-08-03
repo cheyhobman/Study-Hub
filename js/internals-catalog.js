@@ -1,5 +1,5 @@
 /* ============================================================================
-   internals-catalog.js — the bridge between your NZQA record and the planner.
+   internals-catalog.js: the bridge between your NZQA record and the planner.
    ----------------------------------------------------------------------------
    One source of truth for "which internals exist, and what are their details".
    Both the Add-an-internal form (subject → standard dropdown) and the due-date
@@ -7,6 +7,7 @@
    way carries identical credits / code / recordKey / topicId.
    ========================================================================== */
 import { results } from '../data/results.js';
+import { SEED_DATES } from '../data/planner.js';
 import { subjects, standardByTopicId } from './registry.js';
 
 const uid = () => 'int_' + Math.random().toString(36).slice(2, 9);
@@ -36,7 +37,7 @@ export function allInternals() {
     }));
 }
 
-/** Just the ones still to finish — what the planner is actually for. */
+/** Just the ones still to finish: what the planner is actually for. */
 export function outstandingInternals() {
   return allInternals().filter(i => ['todo', 'pending'].includes(i.status));
 }
@@ -72,6 +73,7 @@ export function creditRecordFor(plannerStatus, grade = '', credits = 0) {
 
 /** Build a fresh, fully pre-filled planner item from a catalogue entry. */
 export function itemFromCatalogue(entry, overrides = {}) {
+  const seeded = SEED_DATES[entry.recordKey] || {};
   const std = standardByTopicId[entry.topicId];
   return {
     id: uid(),
@@ -84,6 +86,7 @@ export function itemFromCatalogue(entry, overrides = {}) {
     dateMode: 'rough', term: null, week: null,
     status: plannerStatusFor(entry.status),
     grade: entry.grade || '',
+    ...seeded,
     ...overrides,
   };
 }

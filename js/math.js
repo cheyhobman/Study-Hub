@@ -1,5 +1,5 @@
 /* ============================================================================
-   math.js — all mathematical / chemical notation goes through KaTeX.
+   math.js: all mathematical / chemical notation goes through KaTeX.
    ----------------------------------------------------------------------------
    Content files write equations in a readable "near-plain-text" form (e.g.
    'a = v² / r' or 'ΔG = ΔH − TΔS'). This module converts that to LaTeX and
@@ -38,7 +38,7 @@ const SYMBOLS = [
   ['σ','\\sigma '], ['τ','\\tau '], ['υ','\\upsilon '], ['φ','\\phi '], ['χ','\\chi '],
   ['ψ','\\psi '], ['ω','\\omega '],
   // misc text
-  ['−', '-'], ['–', '-'], ['—', '-'], ['⁄', '/'],
+  ['−', '-'], ['–', '-'], ['–', '-'], ['⁄', '/'],
 ];
 
 /* Characters that must be escaped so KaTeX doesn't choke on them. */
@@ -87,7 +87,7 @@ export function texify(input) {
 
   // 6. Common function names get upright treatment
   s = s.replace(/\b(sin|cos|tan|sec|cosec|cot|ln|log|exp|max|min)\b/g, '\\$1 ');
-  // KaTeX has no \cosec — use \operatorname
+  // KaTeX has no \cosec. Use \operatorname
   s = s.replace(/\\cosec\s?/g, '\\operatorname{cosec}');
   // cis isn't a LaTeX operator either
   s = s.replace(/\bcis\b/g, '\\operatorname{cis}');
@@ -129,7 +129,7 @@ export function renderMathIn(root = document) {
 
   if (!window.katex) {
     if (!warned) { warned = true; }
-    // KaTeX is deferred — retry shortly, then give up gracefully.
+    // KaTeX is deferred. Retry shortly, then give up gracefully.
     let tries = 0;
     const wait = setInterval(() => {
       if (window.katex) { clearInterval(wait); nodes.forEach(renderOne); }

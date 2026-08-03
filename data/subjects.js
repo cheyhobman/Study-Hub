@@ -1,15 +1,15 @@
 /* ============================================================================
-   subjects.js — THE MASTER STRUCTURE OF THE SITE
+   subjects.js, THE MASTER STRUCTURE OF THE SITE
    ----------------------------------------------------------------------------
    This single file drives the sidebar navigation, every subject overview page,
    and the progress tracker. Each subject lists its achievement standards.
-   Each standard points at a `topicId` — the teaching content for that topic
+   Each standard points at a `topicId`, the teaching content for that topic
    lives in data/content/<subject>.js keyed by the same id.
 
    HOW TO EDIT:
    - Change exam-relevant metadata (titles, credits, External/Internal) here.
    - `dot`  = the colour used for the little dot beside the subject in the nav
-              (kept inside the phthalo-green family — see css/styles.css).
+              (kept inside the phthalo-green family: see css/styles.css).
    - `icon` = emoji shown on the subject tile.
    - `verify: true` on a standard renders a "confirm against NZQA" reminder
      (used for Biology & English until their content is checked).
@@ -24,10 +24,10 @@ export const subjects = [
     level: 'NCEA Level 3',
     dot: '#2D8A5F',
     icon: '🧪',
-    blurb: 'Thermochemistry, organic, aqueous equilibria, redox & spectroscopy — the priority build.',
+    blurb: 'Thermochemistry, organic, aqueous equilibria, redox & spectroscopy: the priority build.',
     realWorld: {
       title: 'Where this leads in business & finance',
-      html: "Chemistry is the backbone of some of the largest industries on the planet — pharmaceuticals, energy, materials, agritech — and the people who <em>understand the science and can read a balance sheet</em> are the ones running them. Equity analysts covering biotech or mining need to judge whether a compound or a process actually works before valuing the company. Fonterra, Zespri and the whole NZ primary-export sector are chemistry businesses. A chemistry background plus commercial skill is a genuinely rare combination: it's the profile of technical consultants, patent attorneys, R&amp;D managers and venture investors in deep tech.",
+      html: "Chemistry is the backbone of some of the largest industries on the planet, pharmaceuticals, energy, materials, agritech, and the people who <em>understand the science and can read a balance sheet</em> are the ones running them. Equity analysts covering biotech or mining need to judge whether a compound or a process actually works before valuing the company. Fonterra, Zespri and the whole NZ primary-export sector are chemistry businesses. A chemistry background plus commercial skill is a genuinely rare combination: it's the profile of technical consultants, patent attorneys, R&amp;D managers and venture investors in deep tech.",
       video: 'careers combining chemistry and business finance biotech investing',
     },
     standards: [
@@ -38,7 +38,7 @@ export const subjects = [
       { code: 'AS 91392', num: '91392', assess: '3.6', title: 'Equilibrium principles in aqueous systems', credits: 5, type: 'External',
         topicId: 'chem-91392', blurb: 'Ka/Kb, pH, buffers, solubility (Ks) and titration curves.' },
       { code: 'AS 91388', num: '91388', assess: '3.2', title: 'Spectroscopic data', credits: 3, type: 'Internal', priority: true,
-        topicId: 'chem-91388', blurb: 'Mass spec, IR and ¹H/¹³C NMR — deducing structures from combined data.' },
+        topicId: 'chem-91388', blurb: 'Mass spec, IR and ¹³C NMR, deducing structures from combined data.' },
       { code: 'AS 91387', num: '91387', assess: '3.1', title: 'Investigation involving quantitative analysis', credits: 4, type: 'Internal',
         topicId: 'chem-91387', blurb: 'Titrations, gravimetric & colorimetric analysis; uncertainty & method.' },
       { code: 'AS 91393', num: '91393', assess: '3.7', title: 'Oxidation-reduction processes', credits: 3, type: 'Internal',
@@ -54,10 +54,10 @@ export const subjects = [
     level: 'NCEA Level 3',
     dot: '#1E9686',
     icon: '⚛️',
-    blurb: 'Waves, mechanical systems and electrical systems — the three big externals.',
+    blurb: 'Waves, mechanical systems and electrical systems: the three big externals.',
     realWorld: {
       title: 'Where this leads in business & finance',
-      html: "Physics graduates are aggressively recruited by investment banks, hedge funds and trading firms — not for the physics, but for the modelling. Quantitative analysts (\\u201cquants\\u201d) build the pricing and risk models behind derivatives markets, and the maths is the same differential-equation and probability toolkit you're learning here. Jane Street, Optiver and every major bank hire physicists specifically because they can model complex systems under uncertainty. Closer to home, the same skills drive energy trading, insurance risk pricing, and the engineering economics behind Rocket Lab.",
+      html: "Physics graduates are aggressively recruited by investment banks, hedge funds and trading firms, not for the physics, but for the modelling. Quantitative analysts (\\u201cquants\\u201d) build the pricing and risk models behind derivatives markets, and the maths is the same differential-equation and probability toolkit you're learning here. Jane Street, Optiver and every major bank hire physicists specifically because they can model complex systems under uncertainty. Closer to home, the same skills drive energy trading, insurance risk pricing, and the engineering economics behind Rocket Lab.",
       video: 'why banks hire physicists quantitative finance quant careers',
     },
     standards: [
@@ -82,7 +82,7 @@ export const subjects = [
     level: 'NCEA Level 3',
     dot: '#38946B',
     icon: '∫',
-    blurb: 'Complex numbers, differentiation and integration — three externals, 17 credits.',
+    blurb: 'Complex numbers, differentiation and integration: three externals, 17 credits.',
     realWorld: {
       title: 'Where this leads in business & finance',
       html: 'Calculus <em>is</em> finance once you get past year one. Optimisation (your max/min problems) is how firms set prices and allocate capital; rates of change are how interest compounds and how bonds respond to yield moves; integration is how you value a cash flow stream. The Black\\u2013Scholes model that underpins global options markets is a differential equation. Every finance, economics, actuarial and data-science degree opens with exactly this content \\u2014 arriving already fluent puts you a year ahead.',
@@ -106,7 +106,7 @@ export const subjects = [
     level: 'NCEA Level 3',
     dot: '#5C9A57',
     icon: '📊',
-    blurb: 'Statistical reports, probability concepts and probability distributions — three externals.',
+    blurb: 'Statistical reports, probability concepts and probability distributions: three externals.',
     realWorld: {
       title: 'Where this leads in business & finance',
       html: "Statistics is the single most directly employable subject on this list. Risk, pricing, forecasting, A/B testing, credit scoring, fraud detection and portfolio construction are all applied statistics. Actuaries \\u2014 consistently among NZ's best-paid professions \\u2014 are essentially professional statisticians. And 91584 is training in something rarer than technique: the judgement to spot when a number is being used to mislead. In business that skill protects you from bad investments, bad consultants and bad strategy decks.",
@@ -144,7 +144,7 @@ export const subjects = [
         topicId: 'bio-91603', accent: '#C77B29', blurb: 'Tropisms & nastic responses, animal behaviour, biological rhythms, migration & homing.' },
       { code: 'AS 91605', num: '91605', assess: '3.5', title: 'Evolutionary processes leading to speciation', credits: 4, type: 'External',
         topicId: 'bio-91605', accent: '#2E7FA8', blurb: 'Mechanisms of evolution, reproductive isolation & speciation.' },
-      { code: 'AS 91602', num: '91602', assess: '3.2', title: 'Integrate biological knowledge — socio-scientific issue', credits: 3, type: 'Internal',
+      { code: 'AS 91602', num: '91602', assess: '3.2', title: 'Integrate biological knowledge: socio-scientific issue', credits: 3, type: 'Internal',
         topicId: 'bio-91602', accent: '#3F8F86', blurb: 'Build an informed, evidence-based response to a biological issue in society.' },
       { code: 'AS 91606', num: '91606', assess: '3.6', title: 'Trends in human evolution', credits: 4, type: 'External',
         topicId: 'bio-91606', accent: '#8A5AA8', blurb: 'Bipedalism, skeletal changes and cultural evolution of hominins.' },
@@ -159,7 +159,7 @@ export const subjects = [
     level: 'NCEA Level 3',
     dot: '#6E9152',
     icon: '📖',
-    blurb: 'The two external essays — a written-text response and a visual/oral-text response.',
+    blurb: 'The two external essays: a written-text response and a visual/oral-text response.',
     realWorld: {
       title: 'Where this leads in business & finance',
       html: "Ask anyone senior in business what actually separates people at the top and they will say communication. Building an argument from evidence, structuring it, and making someone believe it is precisely what an investment memo, a consulting deck, a pitch to a board or a legal submission is. Warren Buffett has said learning to write and speak clearly is the single skill that most increased his value. The close-reading muscle matters too: the ability to notice how a company's annual report is framing bad news is the same skill you use on a Nolan film.",
@@ -168,13 +168,13 @@ export const subjects = [
     standards: [
       // Verified against nzqa.govt.nz (2026 specifications), 31 Jul 2026.
       { code: 'AS 91472', num: '91472', assess: '3.7', title: 'Respond critically to studied written text(s)', credits: 4, type: 'External',
-        topicId: 'eng-91472', blurb: 'Written-text essay — critical, evidence-supported response to studied text(s).' },
+        topicId: 'eng-91472', blurb: 'Written-text essay: critical, evidence-supported response to studied text(s).' },
       { code: 'AS 91473', num: '91473', assess: '3.8', title: 'Respond critically to studied visual or oral text(s)', credits: 4, type: 'External',
-        topicId: 'eng-91473', blurb: 'Visual-text essay — Inception / Interstellar; evidence-supported critical response.' },
+        topicId: 'eng-91473', blurb: 'Visual-text essay: Inception / Interstellar; evidence-supported critical response.' },
       { code: 'English 3.7', num: '', assess: '3.7', title: 'Respond critically to significant connections across texts', credits: 4, type: 'Internal',
-        topicId: 'eng-3-7', blurb: 'The connections essay — linking several texts around one idea, with evidence.' },
+        topicId: 'eng-3-7', blurb: 'The connections essay: linking several texts around one idea, with evidence.' },
       { code: 'English 3.9', num: '', assess: '3.9', title: 'Respond critically to visual/oral text(s) through close reading', credits: 3, type: 'Internal',
-        topicId: 'eng-3-9', blurb: 'Close reading of a short visual/oral extract — unpacking a few minutes in depth.' },
+        topicId: 'eng-3-9', blurb: 'Close reading of a short visual/oral extract: unpacking a few minutes in depth.' },
     ],
   },
 ];

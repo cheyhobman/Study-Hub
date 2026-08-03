@@ -1,5 +1,5 @@
 /* ============================================================================
-   ui.js — rendering helpers + the "content block" renderer.
+   ui.js: rendering helpers + the "content block" renderer.
    ----------------------------------------------------------------------------
    Teaching content is authored as arrays of *blocks* (plain data). This file
    turns each block into styled HTML, so the design lives here and the content
@@ -52,7 +52,7 @@ export function shuffle(arr = []) {
   return a;
 }
 
-/* A YouTube search URL for a topic — always resolves to relevant videos, so it
+/* A YouTube search URL for a topic. Always resolves to relevant videos, so it
    never goes stale the way a hard-coded video id would. */
 export function ytSearch(query) {
   return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
@@ -90,11 +90,11 @@ export function pastPapersTable(num, years = recentExamYears()) {
             data-url="${base}/exams/${y}/${num}-exm-${y}.pdf">⏱ Timed</button></td>
     </tr>`).join('');
   return `<div class="table-wrap"><table class="data">
-      <caption>Past exams &amp; marking schedules — AS ${num} (last 5 years)</caption>
+      <caption>Past exams &amp; marking schedules, AS ${num} (last 5 years)</caption>
       <thead><tr><th>Year</th><th>Exam paper</th><th>Marking schedule</th><th>Practice</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <p class="xs muted" style="margin-top:6px"><strong>⏱ Timed</strong> opens the paper and starts a countdown matching the exam length. Official NZQA PDFs. If a link 404s, that year’s paper may sit under a slightly different code — browse the <a href="https://www.nzqa.govt.nz/ncea/subjects/" target="_blank" rel="noopener">NZQA subject page</a>.</p>`;
+    <p class="xs muted" style="margin-top:6px"><strong>⏱ Timed</strong> opens the paper and starts a countdown matching the exam length. Official NZQA PDFs. If a link 404s, that year’s paper may sit under a slightly different code: browse the <a href="https://www.nzqa.govt.nz/ncea/subjects/" target="_blank" rel="noopener">NZQA subject page</a>.</p>`;
 }
 
 /* ---- Small SVG icons used across the UI ---- */
@@ -123,7 +123,7 @@ export function renderBlock(b) {
 
     case 'key':
       return `<div class="keypoints">
-        ${b.title ? `<h4>★ ${b.title}</h4>` : ''}
+        ${b.title ? `<h4>${b.title}</h4>` : ''}
         <ul>${(b.items || []).map(i => `<li>${i}</li>`).join('')}</ul>
       </div>`;
 
@@ -202,11 +202,11 @@ export function renderBlock(b) {
     case 'chips':
       return `<div class="chips">${(b.items || []).map(c => `<span class="chip">${c}</span>`).join('')}</div>`;
 
-    /* Key Definitions panel — prominent, scannable term/meaning list.
+    /* Key Definitions panel: prominent, scannable term/meaning list.
        items: [{ term, def, note? }] */
     case 'definitions':
       return `<div class="defs">
-        <h4>${b.title || '📖 Key definitions'}</h4>
+        <h4>${b.title || 'Key definitions'}</h4>
         ${b.intro ? `<p class="defs-intro">${b.intro}</p>` : ''}
         <dl class="defs-list">${(b.items || []).map(d => `
           <div class="def-item">
@@ -215,11 +215,11 @@ export function renderBlock(b) {
           </div>`).join('')}</dl>
       </div>`;
 
-    /* "How this connects" — explicit cross-links between standards/subjects.
+    /* "How this connects", explicit cross-links between standards/subjects.
        items: [{ to (href), label, why }] */
     case 'connects':
       return `<div class="connects">
-        <h4>${b.title || '🔗 How this connects'}</h4>
+        <h4>${b.title || 'How this connects'}</h4>
         ${b.intro ? `<p class="cx-intro">${b.intro}</p>` : ''}
         <div class="cx-list">${(b.items || []).map(i => `
           <a class="cx-item" href="${i.to}" ${/^#/.test(i.to) ? 'data-link' : 'target="_blank" rel="noopener"'}>
@@ -248,14 +248,14 @@ function chev() {
   return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>';
 }
 
-/* A "watch on YouTube" card. Opens a YouTube search for the topic (robust — no
+/* A "watch on YouTube" card. Opens a YouTube search for the topic (robust: no
    dead links). `query` is the search text; `label` is what to show. */
 function videoRow(v = {}) {
   const q = v.query || v.label || '';
   return `<a class="video-row" href="${ytSearch(q)}" target="_blank" rel="noopener">
     <span class="vr-play">${icons.play}</span>
     <span class="vr-main"><span class="vr-label">${v.label || 'Watch an explainer'}</span>
-      <span class="vr-note">${v.note || 'Opens a YouTube search — pick a video that clicks for you'}</span></span>
+      <span class="vr-note">${v.note || 'Opens a YouTube search: pick a video that clicks for you'}</span></span>
     <span class="lr-ext">${icons.ext}</span>
   </a>`;
 }
@@ -284,8 +284,7 @@ export function initScrollSpy() {
   /* Scroll-position based rather than IntersectionObserver.
      ------------------------------------------------------------------
      The old version watched for a section entering a narrow band in the
-     top 30% of the viewport. The LAST section could never reach that band
-     — once the page bottoms out it simply stops moving — so "Past exams"
+     top 30% of the viewport. The LAST section could never reach that band, once the page bottoms out it simply stops moving, so "Past exams"
      never lit up no matter how far you scrolled. Computing the active
      section from scroll position sidesteps that, and lets us special-case
      the bottom of the page explicitly. */
@@ -322,7 +321,7 @@ export function initScrollSpy() {
 
   /* Coalesce scroll events to one update per frame. requestAnimationFrame is
      the right tool when the page is visible, but it never fires in a hidden or
-     backgrounded tab — so fall back to a short timer, which keeps the spy
+     backgrounded tab, so fall back to a short timer, which keeps the spy
      correct if the page is restored, printed, or driven headlessly. */
   const onScroll = () => {
     if (raf !== null) return;

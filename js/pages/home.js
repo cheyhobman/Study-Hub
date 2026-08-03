@@ -1,22 +1,24 @@
 /* ============================================================================
-   pages/home.js — the dashboard.
+   pages/home.js: the dashboard.
    ----------------------------------------------------------------------------
    Four blocks, in the order you actually need them:
 
-     1. Hero        — greeting, headline numbers, "start a revision session"
-     2. What's coming — ONE merged timeline: internals + derived + externals,
+     1. Hero: greeting, headline numbers, "start a revision session"
+     2. What's coming: ONE merged timeline: internals + derived + externals,
                         filterable. This replaces what used to be two separate
                         widgets (an externals-only countdown card and a
                         "what's due next" strip) that answered the same question
                         and between them still managed to omit the September
                         derived exams entirely.
-     3. Snapshot    — streak, flagged, reviewed %, and weakest topics in one row
-     4. Subjects    — the grid
+     3. Snapshot, streak, flagged, reviewed %, and weakest topics in one row
+     4. Subjects, the grid
    ========================================================================== */
-import { enrolledSubjects as subjects, subjectById, enrolledStandards as allStandards } from '../registry.js';
+import { visibleSubjects, subjectById, visibleStandards } from '../registry.js';
 import { store } from '../store.js';
+import { esc } from '../ui.js';
 import { upcomingDeadlines, undatedInternals, deadlineCounts, duePill, KINDS } from '../deadlines.js';
-import { displayName } from '../../data/profile.js';
+/* Reads the STORE, not data/profile.js, so a visitor who sets their own name
+   sees it here. store.profile() falls back to the seed file. */
 
 function greeting() {
   const h = new Date().getHours();
@@ -38,7 +40,7 @@ function deadlineRow(x) {
     <span class="cd-dot" style="background:${s.dot || 'var(--accent)'}"></span>
     <span class="due-main">
       <span class="due-title">${x.name}</span>
-      <span class="due-sub">${k.icon} ${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.span ? '📆 ' : ''}${x.dateText}</span>
+      <span class="due-sub">${k.icon} ${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.span ? '' : ''}${x.dateText}</span>
     </span>
     ${x.statusLabel ? `<span class="int-status" style="background:${x.statusColour}22;color:${x.statusColour};border-color:${x.statusColour}55">${x.statusLabel}</span>` : ''}
     ${duePill(x)}
@@ -50,7 +52,7 @@ function whatsComing() {
   const filter = store.dueFilter();
   const counts = deadlineCounts();
   const kinds = filter === 'all' ? undefined : [filter];
-  const items = upcomingDeadlines(kinds ? { kinds } : {}).slice(0, 7);
+  const items = upcomingDeadlines(kinds ? { kinds } : {}).slice(0, 6);  // divides evenly into 1/2/3 columns
   const undated = undatedInternals();
 
   const chip = (key, label, n) => `
@@ -62,7 +64,7 @@ function whatsComing() {
   return `
   <div class="card mb-5" id="whats-coming">
     <div class="flex items-center wrap gap-3 mb-3" style="justify-content:space-between">
-      <h3>🗓 What's coming</h3>
+      <h3>What's coming</h3>
       <a class="xs" href="#/exams" data-link style="font-weight:600">exams &amp; deadlines →</a>
     </div>
 
@@ -79,19 +81,46 @@ function whatsComing() {
 
     ${undated.length ? `
       <p class="xs muted mt-3">
-        ${undated.length} internal${undated.length === 1 ? '' : 's'} ${undated.length === 1 ? 'has' : 'have'} no date yet, so ${undated.length === 1 ? "it can't" : "they can't"} be ranked here —
-        <a href="#/internals" data-link>add ${undated.length === 1 ? 'a date' : 'dates'} →</a>
+        ${undated.length} internal${undated.length === 1 ? '' : 's'} ${undated.length === 1 ? 'has' : 'have'} no date yet, so ${undated.length === 1 ? "it can't" : "they can't"} be ranked here: <a href="#/internals" data-link>add ${undated.length === 1 ? 'a date' : 'dates'} →</a>
       </p>` : ''}
   </div>`;
 }
 
+/* Filter chips on "What's coming".
+   ---------------------------------------------------------------------------
+   Swaps ONLY this card, and re-binds only this card. It used to call
+   renderHome().onMount(), which rebuilt every handler on the dashboard; and
+   because setDueFilter() emitted a store change, the app-level subscriber then
+   re-rendered the whole route and threw the reader back to the top. Both are
+   fixed: the setter is quiet, and this replaces one element. */
+function wireWhatsComing() {
+  const host = document.getElementById('whats-coming');
+  if (!host) return;
+  host.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-filter]');
+    if (!btn) return;
+    e.preventDefault();
+    store.setDueFilter(btn.dataset.filter);
+    /* Pin the scroll explicitly. The card changes height as the list filters,
+       and the browser's scroll-anchoring otherwise nudges the page by ~80px. */
+    const y = window.scrollY;
+    const fresh = document.createElement('div');
+    fresh.innerHTML = whatsComing();
+    host.replaceWith(fresh.firstElementChild);
+    wireWhatsComing();                 // re-bind the replacement
+    window.scrollTo(0, y);
+  });
+}
+
 export function renderHome() {
+  const subjects = visibleSubjects();
+  const allStandards = visibleStandards();
   const streak = store.streak();
   const totalTopics = subjects.reduce((n, s) => n + s.standards.length, 0);
   const totalReviewed = store.reviewedCount();
   const flagged = store.flaggedCount();
 
-  /* Headline number is now the NEAREST assessment of any kind — which for most
+  /* Headline number is now the NEAREST assessment of any kind: which for most
      of the year is a derived exam or an internal, not the November externals. */
   const nextUp = upcomingDeadlines({ graceDays: 0 })[0];
 
@@ -100,7 +129,7 @@ export function renderHome() {
 
   const reviewedPct = totalTopics ? Math.round((totalReviewed / totalTopics) * 100) : 0;
 
-  /* Weakest topics by quiz average — only topics actually attempted. */
+  /* Weakest topics by quiz average: only topics actually attempted. */
   const weak = allStandards
     .map(std => ({ std, pct: store.quizAvgPct(std.topicId) }))
     .filter(x => x.pct !== null)
@@ -112,11 +141,11 @@ export function renderHome() {
   <div class="content-inner">
     <!-- 1 ── Hero -->
     <div class="hero mb-5">
-      <h1>${greeting()}, ${displayName()} 👋</h1>
+      <h1>${greeting()}, ${esc((store.profile().name || '').trim() || 'there')} </h1>
       <p class="hero-sub">Your NCEA Level 3 command centre. Pick a subject, review a topic, keep the streak alive.</p>
       <div class="hero-stats">
         <div class="hero-stat">
-          <div class="hs-num">${nextUp ? nextUp.days : '—'}</div>
+          <div class="hs-num">${nextUp ? nextUp.days : '–'}</div>
           <div class="hs-label">${nextUp ? `Days to ${KINDS[nextUp.kind].noun}` : 'Nothing scheduled'}</div>
         </div>
         <div class="hero-stat"><div class="hs-num">${totalReviewed}<span style="font-size:0.5em;color:var(--phthalo-200)">/${totalTopics}</span></div><div class="hs-label">Topics reviewed</div></div>
@@ -124,9 +153,8 @@ export function renderHome() {
       </div>
 
       <div class="hero-cta">
-        <a class="btn btn-hero" href="#/revise" data-link>🎯 Start a revision session</a>
-        <p class="xs hero-cta-sub">Mixed flashcards and questions from whichever topics you're weakest on —
-          ${streak.count > 0 ? `keep the ${streak.count}-day streak going.` : 'ten minutes is enough to start a streak.'}</p>
+        <a class="btn btn-hero" href="#/revise" data-link>Start a revision session</a>
+        <p class="xs hero-cta-sub">Mixed flashcards and questions from whichever topics you're weakest on: ${streak.count > 0 ? `keep the ${streak.count}-day streak going.` : 'ten minutes is enough to start a streak.'}</p>
       </div>
     </div>
 
@@ -150,7 +178,7 @@ export function renderHome() {
           <span class="snap-label">flagged</span>
         </a>
         <div class="snap-stat">
-          <span class="snap-icon">📈</span>
+          <span class="snap-icon">↗</span>
           <span class="snap-num">${reviewedPct}%</span>
           <span class="snap-label">reviewed</span>
         </div>
@@ -198,18 +226,7 @@ export function renderHome() {
     </div>
   </div>`,
 
-    onMount() {
-      /* Filter chips — swap the stored filter and re-render just this card. */
-      document.querySelectorAll('#whats-coming [data-filter]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          store.setDueFilter(btn.dataset.filter);
-          const host = document.getElementById('whats-coming');
-          host.outerHTML = whatsComing();
-          renderHome().onMount();          // re-wire the fresh chips
-        });
-      });
-    },
+    onMount() { wireWhatsComing(); },
   };
 }
 

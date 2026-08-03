@@ -1,5 +1,5 @@
 /* ============================================================================
-   search.js — wires the top-bar search box to the global index (registry.js).
+   search.js, wires the top-bar search box to the global index (registry.js).
    Live dropdown results, keyboard navigation ("/" to focus, ↑/↓ to move,
    Enter to open, Esc to close).
    ========================================================================== */
@@ -25,7 +25,7 @@ export function initSearch() {
     const q = input.value.trim();
     if (!q) { close(); return; }
 
-    // The first search has to load and index every content module — show a
+    // The first search has to load and index every content module. Show a
     // loading state rather than an empty dropdown.
     if (!indexReady) {
       panel.innerHTML = `<div class="search-empty"><span class="spinner"></span> Building search index…</div>`;

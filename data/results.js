@@ -1,24 +1,23 @@
 /* ============================================================================
-   results.js — Chey's REAL NZQA Record of Learning (transcribed 1 Aug 2026).
+   results.js: Chey's REAL NZQA Record of Learning (transcribed 1 Aug 2026).
    ----------------------------------------------------------------------------
    This seeds the Progress page so credit totals are accurate out of the box.
    Anything you change on that page is saved as an override in localStorage and
    takes precedence over the values here.
 
    status values:
-     'achieved'   — credits banked (grade: 'A' | 'M' | 'E')
-     'external'   — sitting it in the November externals (no credits yet)
-     'notassessed'— entered but Standard Not Assessed (no credits, not pursuing)
-     'na'         — Not Applicable on the record
+     'achieved', credits banked (grade: 'A' | 'M' | 'E')
+     'external', sitting it in the November externals (no credits yet)
+     'notassessed', entered but Standard Not Assessed (no credits, not pursuing)
+     'na', Not Applicable on the record
 
-   `resit: true`  — already achieved, but being re-sat this year to improve the
+   `resit: true`. Already achieved, but being re-sat this year to improve the
                     grade. Credits are already banked, so a resit can only
                     raise the grade, never lose the credits.
 
    ⚠️ The `as` (achievement standard) numbers are filled in for the standards
    this site teaches. A few standards on your record sit outside those subjects
-   (e.g. Maths 3.2 / 3.3 / 3.15, Biology 3.4, the extra English standards) —
-   their AS numbers are left blank rather than guessed. Add them if you want.
+   (e.g. Maths 3.2 / 3.3 / 3.15, Biology 3.4, the extra English standards). Their AS numbers are left blank rather than guessed. Add them if you want.
    ========================================================================== */
 
 /* ---- Headline qualification status (from the summary panel) ---- */
@@ -78,7 +77,7 @@ export const results = [
     title: 'Electrical systems', credits: 6, status: 'external', assess: 'External' },
 
   /* ============================== 13MAC (Calculus) ==================== */
-  /* ⚠️ 3.5 / 3.6 / 3.7 are already ACHIEVED — the credits are banked. Chey is
+  /* ⚠️ 3.5 / 3.6 / 3.7 are already ACHIEVED. The credits are banked. Chey is
      re-sitting these three externals in Nov 2026 to lift the grade. */
   { group: '13MAC', subject: 'Calculus', code: '3.5', as: '91577', topicId: 'calc-91577',
     title: 'Apply the algebra of complex numbers in solving problems',
@@ -115,7 +114,7 @@ export const results = [
 
   /* ============================== 13BIO ============================== */
   { group: '13BIO', subject: 'Biology', code: '3.2', as: '91602', topicId: 'bio-91602',
-    title: 'Integrate biological knowledge — socio-scientific issue',
+    title: 'Integrate biological knowledge: socio-scientific issue',
     credits: 3, status: 'todo', assess: 'Internal' },
   { group: '13BIO', subject: 'Biology', code: '3.3', as: '91603', topicId: 'bio-91603',
     title: 'Responses of plants and animals to their external environment',
@@ -134,7 +133,7 @@ export const results = [
     title: 'Respond critically to studied written text(s)', credits: 4, status: 'external', assess: 'External' },
   { group: '13ENU', subject: 'English', code: '3.2', as: '91473', topicId: 'eng-91473',
     title: 'Respond critically to studied visual or oral text(s)', credits: 4, status: 'external', assess: 'External' },
-  /* Unfamiliar texts — on the English programme but NOT being sat this year.
+  /* Unfamiliar texts, on the English programme but NOT being sat this year.
      Marked 'notassessed' so it appears on the record (and can be switched on
      later from the Progress page) without its credits counting anywhere. */
   { group: '13ENU', subject: 'English', code: '3.3', as: '91474', topicId: null,

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Statistics — content module. Wires topicId → per-topic content.
+   Statistics: content module. Wires topicId → per-topic content.
    ========================================================================== */
 import reports from './statistics/reports.js';
 import probability from './statistics/probability.js';

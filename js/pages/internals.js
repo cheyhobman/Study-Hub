@@ -1,5 +1,5 @@
 /* ============================================================================
-   pages/internals.js — "My Internals" deadline planner.
+   pages/internals.js: "My Internals" deadline planner.
    ----------------------------------------------------------------------------
    Add/edit every outstanding internal with either an exact due date, a date
    RANGE (multi-day assessments like a Statistics report), or a rough period
@@ -11,7 +11,7 @@
      graded                    → 'achieved'  (credits banked, with grade)
    ========================================================================== */
 import { store } from '../store.js';
-import { subjects, subjectById } from '../registry.js';
+import { subjects, subjectMeta } from '../registry.js';
 import { results } from '../../data/results.js';
 import { internalsForSubject, outstandingInternals, itemFromCatalogue, plannerStatusFor, creditRecordFor } from '../internals-catalog.js';
 import { pageHead, sectionTabs} from './common.js';
@@ -28,7 +28,7 @@ function syncToProgress(item) {
   store.setCreditRecord(item.recordKey, creditRecordFor(item.status, item.grade, row.credits));
 }
 
-/* The internals still outstanding on the record — used to seed the planner.
+/* The internals still outstanding on the record: used to seed the planner.
    Deliberately undated: guessing a due date would be worse than leaving it
    blank, so they sort to the bottom until you fill the real date in. */
 function outstandingFromRecord() {
@@ -37,7 +37,7 @@ function outstandingFromRecord() {
 
 /* ---- one row in the list ------------------------------------------------ */
 function itemRow(item) {
-  const s = subjectById[item.subject] || {};
+  const s = subjectMeta(item.subject);
   const d = describeDate(item);
   const days = daysUntilItem(item);
   const st = STATUSES[item.status] || STATUSES.notstarted;
@@ -56,7 +56,7 @@ function itemRow(item) {
     <div class="int-main">
       <div class="int-title">${item.code ? `<span class="mono xs">${item.code}</span> · ` : ''}${item.title || 'Untitled internal'}</div>
       <div class="int-meta">
-        <span class="int-date">${d.span ? '📆 ' : ''}${d.text}${d.days > 1 ? ` <span class="xs muted">(${d.days} days)</span>` : ''}</span>
+        <span class="int-date">${d.span ? '' : ''}${d.text}${d.days > 1 ? ` <span class="xs muted">(${d.days} days)</span>` : ''}</span>
         ${d.approx && d.hint ? `<span class="xs muted"> · ${d.hint}</span>` : ''}
         ${item.credits ? `<span class="xs muted"> · ${item.credits} credits</span>` : ''}
         ${item.topicId ? ` · <a class="xs" href="#/topic/${item.topicId}" data-link>study →</a>` : ''}
@@ -72,12 +72,40 @@ function itemRow(item) {
 }
 
 /* Options for the "which internal?" dropdown, for one subject. */
+/* Subjects the student added on the Progress page, grouped so they can be
+   planned and put on the calendar exactly like the six taught ones. The value
+   is prefixed `x:` so pickOptions can tell them apart from a taught subject. */
+function extraSubjectOptions(current) {
+  const groups = [...new Set(store.extraStandards().map(r => r.group))];
+  if (!groups.length) return '';
+  return `<optgroup label="Your other subjects">` + groups.map(g => {
+    const name = (store.extraStandards().find(r => r.group === g) || {}).subject || g;
+    const v = 'x:' + g;
+    return `<option value="${v}"${v === current ? ' selected' : ''}>${name} (${g})</option>`;
+  }).join('') + `</optgroup>`;
+}
+
 function pickOptions(subjectId, currentKey) {
-  if (!subjectId) return `<option value="">— pick a subject first —</option>`;
+  if (!subjectId) return `<option value="">Pick a subject first</option>`;
+
+  /* An added subject: list only its INTERNAL standards, since this page plans
+     internals. Externals already come from the exam timetable. */
+  if (subjectId.startsWith('x:')) {
+    const g = subjectId.slice(2);
+    const mine = store.extraStandards().filter(r => r.group === g && r.assess === 'Internal');
+    if (!mine.length) return `<option value="">No internals in this subject</option>`;
+    return `<option value="">Something else, not on my record</option>` +
+      mine.map(r => {
+        const key = `${r.group}:${r.code}`;
+        return `<option value="${key}"${key === currentKey ? ' selected' : ''}>
+          ${r.subject} ${r.code} · ${r.title} · ${r.credits} cr</option>`;
+      }).join('');
+  }
+
   const list = internalsForSubject(subjectId);
-  if (!list.length) return `<option value="">— no internals recorded for this subject —</option>`;
+  if (!list.length) return `<option value="">No internals recorded for this subject</option>`;
   const label = { todo: '', pending: ' (submitted)', achieved: ' (already achieved)' };
-  return `<option value="">— something else / not on my record —</option>` +
+  return `<option value="">Something else, not on my record</option>` +
     list.map(i => `<option value="${i.recordKey}"${i.recordKey === currentKey ? ' selected' : ''}>
       ${i.shortCode} · ${i.title} · ${i.credits} cr${label[i.status] || ''}</option>`).join('');
 }
@@ -97,8 +125,9 @@ function formHtml(item) {
     <div class="grid grid-2">
       <label class="field"><span>Subject</span>
         <select class="sa-input" name="subject" id="int-subject">
-          <option value="">— choose —</option>
+          <option value="">Choose a subject</option>
           ${subjects.map(s => opt(s.id, s.name, it.subject)).join('')}
+          ${extraSubjectOptions(it.subject)}
         </select>
       </label>
       <label class="field"><span>Which internal? <span class="xs muted">picks up the details for you</span></span>
@@ -109,7 +138,7 @@ function formHtml(item) {
     </div>
 
     <details class="int-manual"${it.recordKey ? '' : ' open'}>
-      <summary>Details${it.recordKey ? ' <span class="xs muted">— filled in from your record</span>' : ''}</summary>
+      <summary>Details${it.recordKey ? ' <span class="xs muted">. Filled in from your record</span>' : ''}</summary>
       <div class="grid grid-2 mt-3">
         <label class="field"><span>Standard <span class="xs muted">(e.g. Chemistry 3.2)</span></span>
           <input class="sa-input" name="code" value="${it.code || ''}" placeholder="Chemistry 3.2">
@@ -145,7 +174,7 @@ function formHtml(item) {
           <label class="field"><span>Ends</span>
             <input class="sa-input" type="date" name="endDate" value="${it.endDate || ''}"></label>
         </div>
-        <p class="xs muted">For assessments that run across several days — e.g. a Statistics report done over three periods.</p>
+        <p class="xs muted">For assessments that run across several days: e.g. a Statistics report done over three periods.</p>
       </div>
 
       <div class="dm dm-rough${it.dateMode === 'rough' ? '' : ' hidden'}">
@@ -169,7 +198,7 @@ function formHtml(item) {
         </select></label>
       <label class="field"><span>Grade <span class="xs muted">(once graded)</span></span>
         <select class="sa-input" name="grade">
-          <option value="">—</option>
+          <option value="">N/A</option>
           ${['A', 'M', 'E', 'N'].map(g => opt(g, { A: 'Achieved', M: 'Merit', E: 'Excellence', N: 'Not achieved' }[g], it.grade)).join('')}
         </select></label>
     </div>
@@ -193,7 +222,7 @@ export function renderInternals(editId = null) {
   const editing = editId ? items.find(i => i.id === editId) : null;
 
   const outstanding = items.filter(i => i.status !== 'graded');
-  /* Only work you still have to hand in can be overdue — something already
+  /* Only work you still have to hand in can be overdue. Something already
      submitted is waiting on a marker, not on you. */
   const overdue = outstanding.filter(i =>
     i.status !== 'submitted' && (daysUntilItem(i) ?? 99) < 0);
@@ -234,7 +263,7 @@ export function renderInternals(editId = null) {
           <div class="co-icon">ℹ</div>
           <div class="co-body">
             <h4>${undated.length} internal${undated.length === 1 ? ' has' : 's have'} no date yet</h4>
-            <div>Hit <strong>Edit</strong> on ${undated.length === 1 ? 'it' : 'them'} and add the due date — or a rough
+            <div>Hit <strong>Edit</strong> on ${undated.length === 1 ? 'it' : 'them'} and add the due date, or a rough
               term and week if that's all you know. Undated items sit at the bottom of this list and never
               appear in <strong>What's coming</strong> on your dashboard.</div>
           </div>
@@ -249,16 +278,22 @@ export function renderInternals(editId = null) {
 
     ${list}
 
-    ${items.length ? `<p class="xs muted mt-5">Rough periods (“Term 3, Week 4”) are converted to an approximate date so they sort against exact dates — shown with a <strong>≈</strong>. Term dates live in <code>data/planner.js</code> if your school's calendar differs.</p>` : ''}
+    ${items.length ? `<p class="xs muted mt-5">Rough periods (“Term 3, Week 4”) are converted to an approximate date so they sort against exact dates: shown with a <strong>≈</strong>. Term dates live in <code>data/planner.js</code> if your school's calendar differs.</p>` : ''}
   </div>`;
 
   return {
     html,
     onMount() {
+      /* Keep the reader's place. Opening the form, saving an internal or
+         deleting one all rebuild this page, and losing scroll each time made
+         editing several internals in a row feel like the page was reloading. */
       const rerender = (edit = null) => {
+        const y = window.scrollY;
         const v = renderInternals(edit);
         document.getElementById('content').innerHTML = v.html;
         v.onMount();
+        // Opening the form should show the form; everything else holds position.
+        if (!edit) window.scrollTo(0, y);
       };
 
       const openForm = (id) => { rerender(id || 'new'); setTimeout(() => document.querySelector('#int-form [name=title]')?.focus(), 30); };
@@ -304,18 +339,33 @@ export function renderInternals(editId = null) {
         });
 
         pickSel?.addEventListener('change', () => {
-          const entry = internalsForSubject(subjSel.value).find(i => i.recordKey === pickSel.value);
+          /* Added subjects carry an `x:` prefix and come from the student's own
+             extra-standards list rather than the taught catalogue. */
+          let entry;
+          if (subjSel.value.startsWith('x:')) {
+            const r = store.extraStandards().find(x => `${x.group}:${x.code}` === pickSel.value);
+            if (r) entry = { code: `${r.subject} ${r.code}`, title: r.title, credits: r.credits,
+                             recordKey: `${r.group}:${r.code}`, topicId: '', status: 'todo' };
+          } else {
+            entry = internalsForSubject(subjSel.value).find(i => i.recordKey === pickSel.value);
+          }
           if (!entry) { manual.open = true; return; }
           form.code.value = entry.code;
           form.title.value = entry.title;
           form.credits.value = entry.credits;
           form.recordKey.value = entry.recordKey;
           form.topicId.value = entry.topicId;
-          // only overwrite status for a NEW item — don't clobber an edit
+          // only overwrite status for a NEW item: don't clobber an edit
           if (!form.id.value) form.status.value = plannerStatusFor(entry.status);
           if (entry.grade) form.grade.value = entry.grade;
           manual.open = false;
           toast(`Filled in ${entry.code} · ${entry.credits} credits`);
+        });
+
+        /* Status away from "graded" clears the grade, so a stale result cannot
+           sit next to a status that cannot have one. */
+        form.status?.addEventListener('change', () => {
+          if (form.status.value !== 'graded' && form.grade) form.grade.value = '';
         });
 
         // switch which date fields are visible

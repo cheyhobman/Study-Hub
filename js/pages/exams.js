@@ -1,15 +1,17 @@
 /* ============================================================================
-   pages/exams.js — the Exams timetable, with two tabs:
+   pages/exams.js, the Exams timetable, with two tabs:
      • External exams      (the real NCEA exams, Nov 2026)
      • Derived grade exams (the school's Sept 2026 trial exams)
    Data comes from data/exams.js.
    ========================================================================== */
 import { subjectById, myExternalExams as externalExams, myDerivedExams as derivedExams } from '../registry.js';
 import { pageHead, daysUntil, sectionTabs} from './common.js';
-import { profile } from '../../data/profile.js';
+import { store } from '../store.js';
+import { esc } from '../ui.js';
+
 
 function fmtFull(iso) {
-  if (!iso) return { day: '—', date: 'TBC' };
+  if (!iso) return { day: '–', date: 'TBC' };
   const d = new Date(iso);
   return {
     day: d.toLocaleDateString('en-NZ', { weekday: 'long' }),
@@ -57,7 +59,7 @@ export function renderExams() {
     ${pageHead({
       eyebrow: '📅 Timetable',
       title: 'Exams',
-      lede: 'Your real 2026 externals and the school’s derived-grade (trial) exams — pulled from the official timetables.',
+      lede: 'Your real 2026 externals and the school’s derived-grade (trial) exams: pulled from the official timetables.',
     })}
 
     <div class="quiz-opts" role="tablist" style="margin-bottom:var(--sp-5)">
@@ -67,7 +69,7 @@ export function renderExams() {
 
     <div id="pane-external">
       <div class="callout callout-note"><div class="co-icon">ℹ</div><div class="co-body">
-        <h4>Real NCEA externals — November 2026</h4>
+        <h4>Real NCEA externals: November 2026</h4>
         <p>Each subject’s external standards are examined together in one session. Times follow NZQA’s standard 9:30&nbsp;am / 2:00&nbsp;pm sessions.</p>
       </div></div>
       ${examTable(externalExams, { colTitle: 'Standards', colField: 'standards' })}
@@ -75,13 +77,13 @@ export function renderExams() {
 
     <div id="pane-derived" class="hidden">
       <div class="callout callout-warn"><div class="co-icon">⚠</div><div class="co-body">
-        <h4>School derived-grade / trial exams — September 2026</h4>
+        <h4>School derived-grade / trial exams: September 2026</h4>
         <p>Year 12 &amp; 13 have study leave Wed 9 – Fri 18 Sept.</p>
       </div></div>
       ${examTable(derivedExams, { colTitle: 'Paper', colField: 'paper' })}
     </div>
 
-    <p class="xs muted mt-5">Dates transcribed from your ${profile.year} ${profile.school} timetables. Edit them in <code>data/exams.js</code>.</p>
+    <p class="xs muted mt-5">Dates transcribed from your ${store.profile().year} ${esc(store.profile().school || 'school')} timetables. Edit them in <code>data/exams.js</code>.</p>
   </div>`;
 
   return {

@@ -1,5 +1,5 @@
 /* ============================================================================
-   pages/subject.js — a subject's overview: all its standards, credits,
+   pages/subject.js: a subject's overview: all its standards, credits,
    External/Internal split, and a link to the reference sheet.
    ========================================================================== */
 import { subjectById } from '../registry.js';
@@ -52,16 +52,16 @@ export function renderSubject(subjectId) {
 
     ${s.realWorld ? `
       <div class="realworld">
-        <h3>🚀 ${s.realWorld.title}</h3>
+        <h3>${s.realWorld.title}</h3>
         <p>${s.realWorld.html}</p>
-        ${s.realWorld.video ? renderBlock({ t: 'video', label: 'Watch: ' + s.name + ' in the real world', query: s.realWorld.video, note: 'Opens a YouTube search — a good one to watch when motivation dips' }) : ''}
+        ${s.realWorld.video ? renderBlock({ t: 'video', label: 'Watch: ' + s.name + ' in the real world', query: s.realWorld.video, note: 'Opens a YouTube search: a good one to watch when motivation dips' }) : ''}
       </div>` : ''}
 
     <div class="flex items-center wrap gap-3 mb-3" style="justify-content:space-between">
       <h2>Achievement standards</h2>
       <span class="flex gap-3 wrap">
         <a class="btn btn-ghost btn-sm" href="#/reference/${s.id}" data-link>📄 Reference sheet</a>
-        <a class="btn btn-ghost btn-sm" href="#/printcards/${s.id}" data-link>🖨 Print flashcards</a>
+        <a class="btn btn-ghost btn-sm" href="#/printcards/${s.id}" data-link>Print flashcards</a>
       </span>
     </div>
 
@@ -88,11 +88,5 @@ export function renderSubject(subjectId) {
             <span class="badge">Guide</span>
           </span>
         </a>`; }).join('')}</div>` : ''}
-
-    ${s.standards.some(x => x.verify) ? `<div class="callout callout-warn mt-5">
-      <div class="co-icon">⚠</div><div class="co-body"><h4>Standards to confirm</h4>
-      <p>Some ${s.name} standard numbers/titles are marked for verification against the current
-      <a href="https://www.nzqa.govt.nz/ncea/subjects/" target="_blank" rel="noopener">NZQA subject pages</a>
-      before content is finalised.</p></div></div>` : ''}
   </div>`;
 }

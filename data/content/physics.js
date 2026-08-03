@@ -1,5 +1,5 @@
 /* ============================================================================
-   Physics — content module. Wires topicId → per-topic content (physics/*.js).
+   Physics: content module. Wires topicId → per-topic content (physics/*.js).
    ========================================================================== */
 import waves from './physics/waves.js';
 import mechanics from './physics/mechanics.js';

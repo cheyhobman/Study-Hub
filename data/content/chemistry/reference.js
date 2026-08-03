@@ -1,5 +1,5 @@
 /* ============================================================================
-   Chemistry — condensed formula & quick-reference sheet (printable)
+   Chemistry: condensed formula & quick-reference sheet (printable)
    Consumed by pages/reference.js. Each group is either { items:[formulas] }
    or { blocks:[content blocks] }.
    ========================================================================== */
@@ -34,7 +34,7 @@ export default {
       ],
     },
     {
-      title: 'Organic — naming & conditions (91391)',
+      title: 'Organic: naming & conditions (91391)',
       blocks: [
         { t: 'table', mono: true, headers: ['Group', 'Suffix/prefix'], rows: [
           ['carboxylic acid', '-oic acid'], ['ester', '-yl -oate'], ['amide', '-amide'],
@@ -56,26 +56,46 @@ export default {
       ],
     },
     {
-      title: 'Spectroscopy — IR (91388)',
+      title: 'Spectroscopy: IR (91388)',
       blocks: [
+        /* Ranges taken from the AS91388 data sheet so this sheet and the
+           teaching page can never disagree. C≡N is not on that data sheet
+           and nitriles are not in the standard's scope, so it is not listed. */
         { t: 'table', mono: true, headers: ['Bond', 'cm⁻¹'], rows: [
           ['O–H alcohol', '3200–3550 broad'], ['O–H acid', '2500–3300 v.broad'],
-          ['N–H', '3300–3500'], ['C–H', '2850–3100'], ['C≡N', '2200–2260'],
-          ['C=O', '1670–1750'], ['C=C', '1620–1680'], ['C–O', '1000–1300'],
+          ['N–H amine/amide', '3300–3500 (amide = 2 peaks)'], ['C–H alkane', '2850–3000'],
+          ['C=O acid chloride', '1785–1815'], ['C=O ester', '1735–1750'],
+          ['C=O aldehyde', '1720–1740'], ['C=O ketone', '1710–1720'],
+          ['C=O acid', '1705–1720'], ['C=O amide', '1630–1695'],
+          ['C=C alkene', '1630–1680'], ['C–O', '1000–1300'],
+          ['C–N', '1000–1250'], ['C–Cl', '600–800'], ['C–Br', '500–600'],
         ]},
       ],
     },
     {
-      title: 'Spectroscopy — NMR & MS (91388)',
+      title: 'Spectroscopy: ¹³C NMR & MS (91388)',
       blocks: [
-        { t: 'table', mono: true, headers: ['¹H δ (ppm)', 'Environment'], rows: [
-          ['0.8–1.2', 'R–CH₃'], ['2.0–2.6', 'CH₃CO–'], ['3.3–4.5', 'CH–O'],
-          ['4.5–6.5', '=C–H'], ['9.4–10', '–CHO'], ['2–12', 'OH/COOH'],
+        /* The "student NMR table". This is the exact table handed out in the
+           assessment. AS91388 uses ¹³C only; there is no ¹H NMR in the standard,
+           so no ¹H shift table and no n+1 rule appear here. */
+        { t: 'table', mono: true, headers: ['¹³C δ (ppm)', 'Carbons in this region'], rows: [
+          ['0–15', 'CH₃CH₂–'], ['15–30', 'CH₃–'], ['20–35', '–CH₂–'],
+          ['30–60', 'C–N, C–Cl, C–Br, C–C=O'], ['50–70', 'C–O'], ['60–90', 'C≡C'],
+          ['100–150', 'C=C'],
+          ['160–185', 'C=O in acids, esters, acyl chlorides, amides'],
+          ['180–220', 'C=O in aldehydes and ketones'],
         ]},
-        { t: 'table', mono: true, headers: ['Mass lost', 'Group'], rows: [
-          ['15', 'CH₃'], ['17', 'OH'], ['18', 'H₂O'], ['29', 'CHO/C₂H₅'], ['45', 'COOH'],
+        { t: 'table', mono: true, headers: ['Fragment m/z', 'Ion'], rows: [
+          ['15', 'CH₃⁺'], ['17', 'OH⁺'], ['28', 'CO⁺'], ['29', 'CH₃CH₂⁺ / CHO⁺'],
+          ['30', 'CH₂NH₂⁺'], ['31', 'CH₃O⁺ / CH₂OH⁺'], ['43', 'C₃H₇⁺ / CH₃CO⁺'],
+          ['44', 'CONH₂⁺'], ['45', 'COOH⁺ / CH₃CHOH⁺ / CH₃CH₂O⁺'], ['57', 'C₄H₉⁺'],
         ]},
-        { t: 'html', html: '<p class="xs muted">n+1 rule: n neighbours → n+1 peaks. Cl → M:M+2 ≈ 3:1; Br → ≈ 1:1. Odd M⁺ → N present.</p>' },
+        { t: 'table', mono: true, headers: ['Mass lost', 'Group', 'Indicates'], rows: [
+          ['1', 'H', '–COOH / –CHO / –NH– / sometimes –OH'], ['15', 'CH₃', '–CH₃'],
+          ['17', 'OH', '–COOH / –OH'], ['18', 'H₂O', '–OH (alcohol)'],
+          ['29', 'CH₃CH₂ or CHO', '–CH₂CH₃ / –CHO'], ['43', 'CH₃CO', 'CH₃CO–'],
+        ]},
+        { t: 'html', html: '<p class="xs muted">Cl → M:M+2 ≈ 3:1 · Br → ≈ 1:1 · I → mass 127 (and HI⁺ 128) · odd M⁺ → odd number of N · ¹³C isotope peak = M+1, ignore it · CDCl₃ solvent peak at 77.0, ignore it. H=1, C=12, N=14, O=16, Cl=35.5, Br=80.</p>' },
       ],
     },
   ],

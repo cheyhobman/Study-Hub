@@ -1,16 +1,19 @@
 /* ============================================================================
-   store.js — all persistent state (localStorage). No backend, no cookies.
+   store.js: all persistent state (localStorage). No backend, no cookies.
    ----------------------------------------------------------------------------
    Tracks:
-     • reviewed  — Set of topicIds the student has marked "reviewed"
-     • flagged   — Set of topicIds flagged as "needs more work"
-     • streak    — consecutive-day study streak {count, lastActive}
-     • theme     — 'light' | 'dark'
-     • quizBest  — best score per topic { topicId: {score, total} }
+     • reviewed. Set of topicIds the student has marked "reviewed"
+     • flagged: Set of topicIds flagged as "needs more work"
+     • streak, consecutive-day study streak {count, lastActive}
+     • theme, 'light' | 'dark'
+     • quizBest, best score per topic { topicId: {score, total} }
 
    Anything that changes state emits a 'change' event so the UI can refresh
    (sidebar progress, badges, etc.).
    ========================================================================== */
+
+import { isTheme, themeById } from './themes.js';
+import { profile as seedProfile } from '../data/profile.js';
 
 const NS = 'ncea.';
 
@@ -68,7 +71,7 @@ export const store = {
   reviewedIds() { return [...reviewed]; },
   reviewedCount() { return reviewed.size; },
   /** Reviewed count restricted to a given list of topicIds (keeps the sidebar
-      numerator and denominator measuring the same thing — study guides are
+      numerator and denominator measuring the same thing. Study guides are
       markable but are not standards, which used to produce "27 / 26"). */
   reviewedCountIn(ids) { return ids.filter(id => reviewed.has(id)).length; },
 
@@ -82,18 +85,32 @@ export const store = {
   flaggedIds() { return [...flagged]; },
   flaggedCount() { return flagged.size; },
 
-  /* ---- Theme ---- */
+  /* ---- Theme ----
+     Any id in js/themes.js is valid. An unknown id (an old save, or a theme
+     that has since been removed) falls back to the OS preference rather than
+     leaving the page with no palette at all. */
   theme() {
-    return read('theme', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const t = read('theme', null);
+    if (isTheme(t)) return t;
+    /* A retired theme (sepia / high contrast) or a corrupt value: fall back to
+       the nearest surviving one rather than dumping the reader into whatever
+       the OS prefers, which for a sepia user would be a bright white page. */
+    const RETIRED = { sepia: 'sandstone', contrast: 'light' };
+    if (t && RETIRED[t]) { write('theme', RETIRED[t]); return RETIRED[t]; }
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   },
   setTheme(t) {
+    if (!isTheme(t)) return this.theme();
     write('theme', t);
     document.documentElement.setAttribute('data-theme', t);
     emit();
+    return t;
   },
+  /** Kept for the keyboard shortcut: flips between the light and dark you last
+      used, rather than cycling through all five. */
   toggleTheme() {
-    this.setTheme(this.theme() === 'dark' ? 'light' : 'dark');
-    return this.theme();
+    const cur = themeById(this.theme());
+    return this.setTheme(cur.dark ? 'light' : 'dark');
   },
 
   /* ---- Quiz scores ----
@@ -175,7 +192,7 @@ export const store = {
     const p = this.fcProgress(deckId);
     p[cardIndex] = { box, lastSession: session, lastSeen: todayStr() };
     write('fcprog.' + deckId, p);
-    this.recordStudy(1);          // a graded card is a retrieval — counts
+    this.recordStudy(1);          // a graded card is a retrieval, counts
     emit();
     return p;
   },
@@ -218,6 +235,119 @@ export const store = {
   /* Seed the planner from the standards you still have to do (one click). */
   setInternals(list) { write('internals', list); emit(); },
 
+  /* One-time: stamp the known course dates onto planner items that have none.
+     Runs once ever (guarded by a flag), and never overwrites a date the student
+     has already set. */
+  applySeedDates(seed) {
+    if (read('seeddates.v1', false)) return { applied: 0 };
+    const all = this.internals();
+    let applied = 0;
+    const next = all.map(i => {
+      const s = seed[i.recordKey];
+      const hasDate = (i.dateMode === 'exact' && i.date)
+                   || (i.dateMode === 'range' && i.startDate)
+                   || (i.dateMode === 'rough' && i.term);
+      if (!s || hasDate) return i;
+      applied++;
+      /* Clear every date field first so switching mode leaves no stale value
+         behind, then apply the seed (which may carry a status as well). */
+      return { ...i, date: '', startDate: '', endDate: '', term: null, week: null, ...s };
+    });
+    write('internals', next);
+    write('seeddates.v1', true);
+    if (applied) emit();
+    return { applied };
+  },
+
+  /* ---- Subjects the student has removed ----
+     A fresh copy starts with the six taught subjects present, because that is
+     the sensible default. From then on ANY subject can be removed, including
+     those six: nothing about them is special. Removing hides the subject from
+     the sidebar, the dashboard, the credit tracker and every total, but does
+     NOT delete the teaching content, so it can be added back at any time. */
+  /* Hidden by STANDARD key ("13CHE:3.2"), not by subject. Removing is a
+     per-standard action, so a student can drop the one paper they are not
+     sitting without losing the rest of the subject. A subject disappears from
+     the sidebar automatically once every one of its standards is hidden. */
+  hiddenStandards() { return read('hiddenstds', []); },
+  isStandardHidden(k) { return this.hiddenStandards().includes(k); },
+  hideStandard(k) {
+    const all = new Set(this.hiddenStandards()); all.add(k);
+    write('hiddenstds', [...all]); emit();
+  },
+  unhideStandard(k) {
+    write('hiddenstds', this.hiddenStandards().filter(x => x !== k)); emit();
+  },
+  showAllStandards() { write('hiddenstds', []); emit(); },
+
+  /* ---- Who this copy belongs to ----
+     PHASE 1 of PROFILES-PLAN.md. data/profile.js is now only a SEED: whatever
+     the student saves here wins. That means a visitor to the published site can
+     make it theirs without editing a file, which is the whole point.
+
+     Still to come (see the plan): the RECORD itself, data/results.js, moving
+     behind the same pattern, and namespacing every key by profile id so more
+     than one person can share a browser. */
+  profile() {
+    const saved = read('profile', null);
+    return { ...seedProfile, ...(saved || {}) };
+  },
+  setProfile(patch) {
+    const next = { ...this.profile(), ...patch };
+    // Blank strings mean "use the seed", not "store an empty name".
+    Object.keys(next).forEach(k => { if (next[k] === '') delete next[k]; });
+    write('profile', next);
+    emit();
+    return next;
+  },
+  /** Has this person personalised the copy, or are they still seeing the seed? */
+  hasOwnProfile() { return !!read('profile', null); },
+  resetProfile() { write('profile', null); emit(); },
+
+  /* ---- Extra standards (subjects this site doesn't teach) ----
+     data/results.js is the student's own transcribed record. Anything they add
+     from the NZQA catalogue, Economics, Te Reo Māori, Accounting …, or type in
+     by hand lands here instead, so the shipped file is never rewritten and a
+     reset only clears what they added.
+
+     Shape matches a results.js row so the Progress page can concatenate the two
+     lists and treat every row identically:
+       { group, subject, code, as, title, credits, status, grade, assess,
+         topicId: null, custom: true, unverified?: true }                     */
+  extraStandards() { return read('extras', []); },
+  addExtraStandard(row) {
+    const all = this.extraStandards();
+    const key = `${row.group}:${row.code}`;
+    if (all.some(r => `${r.group}:${r.code}` === key)) return { ok: false, reason: 'duplicate' };
+    all.push({ ...row, custom: true });
+    write('extras', all);
+    emit();
+    return { ok: true, count: all.length };
+  },
+  /** Add several at once (a whole subject). Silently skips ones already there. */
+  addExtraStandards(rows) {
+    const all = this.extraStandards();
+    const seen = new Set(all.map(r => `${r.group}:${r.code}`));
+    let added = 0;
+    rows.forEach(row => {
+      const key = `${row.group}:${row.code}`;
+      if (seen.has(key)) return;
+      seen.add(key); all.push({ ...row, custom: true }); added++;
+    });
+    write('extras', all);
+    emit();
+    return { added, skipped: rows.length - added };
+  },
+  removeExtraStandard(group, code) {
+    write('extras', this.extraStandards().filter(r => !(r.group === group && r.code === code)));
+    emit();
+  },
+  /** Drop a whole subject's worth in one go. */
+  removeExtraSubject(group) {
+    write('extras', this.extraStandards().filter(r => r.group !== group));
+    emit();
+  },
+
   /* ---- Goal (Progress page) ---- */
   goal() { return read('goal', { type: 'rank', target: null }); },
   setGoal(g) { write('goal', g); emit(); },
@@ -227,16 +357,22 @@ export const store = {
   setReviseCfg(c) { write('revise', c); },
 
   /* ---- Calendar page filter ---- */
+  /* View preferences are NOT progress data. They deliberately do NOT emit():
+     the app-level subscriber re-renders the whole route on any store change,
+     which threw the reader back to the top of the page every time they touched
+     a filter chip. The page that owns the filter re-renders its own card. */
+  calMonth() { return read('calmonth', null); },
+  setCalMonth(k) { write('calmonth', k); },
   calFilter() { return read('calfilter', 'all'); },
-  setCalFilter(f) { write('calfilter', f); emit(); },
+  setCalFilter(f) { write('calfilter', f); },
 
   /* ---- "What's coming" filter on the dashboard ----
      'all' | 'internal' | 'derived' | 'external' */
   dueFilter() { return read('duefilter', 'all'); },
-  setDueFilter(f) { write('duefilter', f); emit(); },
+  setDueFilter(f) { write('duefilter', f); },
 
   /* ---- Study streak ----
-     A day only counts once you have actually RETRIEVED something — answered
+     A day only counts once you have actually RETRIEVED something, answered
      STREAK_TARGET items across flashcards, quizzes and revision sessions.
      Merely opening the site used to tick the streak over, which made the
      number meaningless. recordStudy() is called from every graded item.
@@ -282,7 +418,7 @@ export const store = {
   streak() {
     const s = read('streak', { count: 0, lastActive: null, todayCount: 0, todayDate: null });
     const today = todayStr();
-    /* todayCount belongs to todayDate, NOT to lastActive — lastActive is only
+    /* todayCount belongs to todayDate, NOT to lastActive. LastActive is only
        set once a day qualifies, so keying off it reported partial progress
        as zero. */
     const todayCount = s.todayDate === today ? (s.todayCount || 0) : 0;
@@ -303,7 +439,7 @@ export const store = {
     todayCount += n;
 
     if (!alreadyQualified && todayCount >= STREAK_TARGET) {
-      // today has just qualified — extend the run, or start a new one
+      // today has just qualified. Extend the run, or start a new one
       if (lastActive && daysBetween(lastActive, today) === 1) count += 1;
       else count = 1;
       lastActive = today;

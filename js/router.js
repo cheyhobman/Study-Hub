@@ -1,5 +1,5 @@
 /* ============================================================================
-   router.js — tiny hash-based router.
+   router.js: tiny hash-based router.
    ----------------------------------------------------------------------------
    Routes (all under the URL hash so the site works on any static host, incl.
    GitHub Pages, with no server config):
@@ -27,6 +27,7 @@ import { renderPrintCards } from './pages/printcards.js';
 import { renderInternals } from './pages/internals.js';
 import { renderRevise } from './pages/revise.js';
 import { renderCalendar } from './pages/calendar.js';
+import { renderAccount } from './pages/account.js';
 
 let currentToken = 0; // guards against out-of-order async renders
 
@@ -53,6 +54,8 @@ async function resolve(parts) {
       return { view: renderExams(), navKey: 'exams-group', subjectId: null };
     case 'calendar':
       return { view: renderCalendar(), navKey: 'exams-group', subjectId: null };
+    case 'account':
+      return { view: renderAccount(), navKey: 'account', subjectId: null };
     case 'progress':
       return { view: renderProgress(), navKey: 'progress', subjectId: null };
     case 'printcards':
@@ -79,8 +82,9 @@ async function resolve(parts) {
   }
 }
 
-export async function renderRoute() {
+export async function renderRoute({ keepScroll = false } = {}) {
   const token = ++currentToken;
+  const savedY = keepScroll ? window.scrollY : 0;
   const content = qs('#content');
   const { parts, anchor } = parse();
 
@@ -113,12 +117,12 @@ export async function renderRoute() {
   /* Position the page LAST.
      ------------------------------------------------------------------
      This has to run after onMount and after KaTeX typesetting, because
-     both change the document height — and a scroll issued against a
+     both change the document height, and a scroll issued against a
      shorter document lands in the wrong place once it grows. We also
      re-assert on the next two frames, since KaTeX finishes laying out
      asynchronously and the browser can otherwise settle at the previous
      page's offset. See also scrollRestoration = 'manual' in initRouter. */
-  positionPage(anchor, token);
+  positionPage(anchor, token, keepScroll ? savedY : null);
 
   // close mobile sidebar after navigating
   qs('#sidebar').classList.remove('open');
@@ -126,9 +130,12 @@ export async function renderRoute() {
 }
 
 /** Scroll to the linked section, or to the very top for a fresh page. */
-function positionPage(anchor, token) {
+function positionPage(anchor, token, restoreY = null) {
   const apply = () => {
     if (token !== currentToken) return;      // a newer navigation won
+    /* A re-render of the page you are already on: put the reader back exactly
+       where they were, rather than treating it as a fresh navigation. */
+    if (restoreY !== null) { window.scrollTo(0, restoreY); return; }
     if (anchor) {
       const el = document.getElementById(anchor);
       if (el) { el.scrollIntoView({ block: 'start', behavior: 'auto' }); return; }
@@ -141,9 +148,8 @@ function positionPage(anchor, token) {
 }
 
 export function initRouter() {
-  /* Stop the browser restoring the previous scroll offset on hash changes —
-     it fires after our own scroll and was landing new pages part-way down. */
+  /* Stop the browser restoring the previous scroll offset on hash changes. It fires after our own scroll and was landing new pages part-way down. */
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-  window.addEventListener('hashchange', renderRoute);
+  window.addEventListener('hashchange', () => renderRoute());
   renderRoute();
 }

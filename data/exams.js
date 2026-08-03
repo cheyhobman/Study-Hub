@@ -1,9 +1,9 @@
 /* ============================================================================
-   exams.js — REAL exam timetables (from Chey's 2026 Wellington College sheets).
+   exams.js: REAL exam timetables (from Chey's 2026 Wellington College sheets).
    ----------------------------------------------------------------------------
    Two timetables:
-     • externalExams  — the actual NCEA external exams (Nov–Dec 2026)
-     • derivedExams   — the school's Derived Grade / trial exams (Sept 2026)
+     • externalExams, the actual NCEA external exams (Nov–Dec 2026)
+     • derivedExams, the school's Derived Grade / trial exams (Sept 2026)
 
    Each subject's external standards are examined in ONE session, so there is one
    row per subject. Times: NZQA morning exams start 9:30am, afternoon 2:00pm.
@@ -14,7 +14,7 @@
    place these. If your class code means something different, adjust below.
    ========================================================================== */
 
-/* ---- REAL external exams (Nov 2026) — from the 2026 Examination Timetable ---- */
+/* ---- REAL external exams (Nov 2026), from the 2026 Examination Timetable ---- */
 export const externalExams = [
   { subject: 'english',             standards: 'AS 91472 · 91473',        date: '2026-11-11T09:30', session: 'AM' },
   { subject: 'physics',             standards: 'AS 91523 · 91524 · 91526', date: '2026-11-12T14:00', session: 'PM' },
@@ -24,7 +24,7 @@ export const externalExams = [
   { subject: 'statistics',          standards: 'AS 91584 · 91585 · 91586', date: '2026-11-24T09:30', session: 'AM' },
 ];
 
-/* ---- DERIVED GRADE / trial exams (Sept 2026) — from the CAA & DGE Timetable ---- */
+/* ---- DERIVED GRADE / trial exams (Sept 2026), from the CAA & DGE Timetable ---- */
 export const derivedExams = [
   { subject: 'english',             paper: '13ENGLISH (all courses)',     date: '2026-09-10T13:00', session: 'PM' },
   { subject: 'biology',             paper: '13BIO',                        date: '2026-09-11T09:00', session: 'AM' },

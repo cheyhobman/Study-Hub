@@ -1,5 +1,5 @@
 /* ============================================================================
-   Biology — content module. Standards verified vs NZQA (2026), 31 Jul 2026.
+   Biology: content module. Standards verified vs NZQA (2026), 31 Jul 2026.
    ========================================================================== */
 import responses from './biology/responses.js';
 import evolution from './biology/evolution.js';

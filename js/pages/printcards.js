@@ -1,12 +1,12 @@
 /* ============================================================================
-   pages/printcards.js — printable double-sided flashcards.
+   pages/printcards.js: printable double-sided flashcards.
    ----------------------------------------------------------------------------
    THE ALIGNMENT PROBLEM
    Printing cards double-sided only works if the BACK of the sheet is laid out
    so each answer lands behind its own question after the paper is flipped.
 
    When a printer duplexes on the LONG edge (the default "flip on long edge"),
-   the sheet turns like a book page — left/right mirrors, top/bottom does not.
+   the sheet turns like a book page. Left/right mirrors, top/bottom does not.
    So on the back page we keep the same row order but REVERSE each row's
    columns. Card 1 sits top-left on the front, so its answer must sit
    top-RIGHT on the back.
@@ -79,11 +79,11 @@ export async function renderPrintCards(subjectId) {
   const pages = paginate(cards);
   const sheets = pages.map((pg, pi) => `
     <section class="pc-sheet" data-side="front">
-      <div class="pc-sheet-label">${s.name} · sheet ${pi + 1} · FRONT (questions) — print this side first</div>
+      <div class="pc-sheet-label">${s.name} · sheet ${pi + 1} · FRONT (questions): print this side first</div>
       <div class="pc-grid">${pg.front.map((c, i) => cardFace(c, { side: 'front', n: pg.startIndex + i + 1, subjectName: c ? c.topic : '' })).join('')}</div>
     </section>
     <section class="pc-sheet" data-side="back">
-      <div class="pc-sheet-label">${s.name} · sheet ${pi + 1} · BACK (answers) — columns mirrored so they align</div>
+      <div class="pc-sheet-label">${s.name} · sheet ${pi + 1} · BACK (answers): columns mirrored so they align</div>
       <div class="pc-grid">${pg.back.map((c) => {
         const idx = c ? pg.front.indexOf(c) : -1;
         return cardFace(c, { side: 'back', n: idx >= 0 ? pg.startIndex + idx + 1 : '', subjectName: c ? c.topic : '' });
@@ -94,7 +94,7 @@ export async function renderPrintCards(subjectId) {
   <div class="content-inner pc-wrap">
     <div class="no-print">
       ${pageHead({
-        eyebrow: `🖨 ${s.icon} ${s.name}`,
+        eyebrow: `${s.icon} ${s.name}`,
         title: 'Print flashcards',
         lede: `${cards.length} cards, laid out ${COLS}×${ROWS} per sheet. The answer sheets are pre-mirrored so that when you print double-sided, every answer lands exactly behind its own question.`,
       })}
@@ -104,10 +104,10 @@ export async function renderPrintCards(subjectId) {
           <h4>How to print these so they line up</h4>
           <p><strong>1.</strong> Hit <em>Print flashcards</em> below (or ⌘P).<br>
           <strong>2.</strong> In the print dialog choose <strong>Two-sided / Duplex → Flip on LONG edge</strong>
-          (this is the usual default — it's the one that turns like a book page, not a notepad).<br>
-          <strong>3.</strong> Set scale to <strong>100%</strong> and margins to <strong>Default</strong> — don't use "Fit to page", it breaks the alignment.<br>
+          (this is the usual default: it's the one that turns like a book page, not a notepad).<br>
+          <strong>3.</strong> Set scale to <strong>100%</strong> and margins to <strong>Default</strong>, don't use "Fit to page", it breaks the alignment.<br>
           <strong>4.</strong> Print, then cut along the grey guide lines. Each card's answer will be on its reverse.</p>
-          <p class="xs muted" style="margin-top:8px">Printing single-sided instead? The sheets still alternate front, back, front, back — just print all pages and pair them up.</p>
+          <p class="xs muted" style="margin-top:8px">Printing single-sided instead? The sheets still alternate front, back, front, back: just print all pages and pair them up.</p>
         </div>
       </div>
 
@@ -124,7 +124,7 @@ export async function renderPrintCards(subjectId) {
       </div>
 
       <div class="flex gap-3 wrap mb-5">
-        <button class="btn btn-primary" id="pc-print">🖨 Print flashcards</button>
+        <button class="btn btn-primary" id="pc-print">Print flashcards</button>
         <a class="btn btn-ghost" href="#/subject/${s.id}" data-link>← Back to ${s.name}</a>
       </div>
       <p class="print-hint mb-5">Preview below shows exactly what will print.</p>

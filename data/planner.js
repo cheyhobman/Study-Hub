@@ -1,23 +1,55 @@
 /* ============================================================================
-   planner.js — term calendar + helpers for the internal deadline planner.
+   planner.js: term calendar + helpers for the internal deadline planner.
    ----------------------------------------------------------------------------
    An internal can be dated three ways:
-     exact  — a single due date            ("2026-08-21")
-     range  — a multi-day assessment       ("2026-09-01" → "2026-09-03")
-     rough  — a term + week, when you don't have a date yet ("Term 3, Week 4")
+     exact: a single due date            ("2026-08-21")
+     range: a multi-day assessment       ("2026-09-01" → "2026-09-03")
+     rough: a term + week, when you don't have a date yet ("Term 3, Week 4")
 
    Rough entries still need to SORT sensibly against exact ones, so each rough
    period is converted to an approximate date from the term calendar below.
    ========================================================================== */
 
 /* NZ state-school term start Mondays for 2026.
-   ⚠️ These are typical dates — individual schools vary by a few days.
+   ⚠️ These are typical dates: individual schools vary by a few days.
    Edit them here if Wellington College's calendar differs. */
 export const TERMS_2026 = {
   1: { start: '2026-02-02', end: '2026-04-02', label: 'Term 1' },
   2: { start: '2026-04-20', end: '2026-06-26', label: 'Term 2' },
   3: { start: '2026-07-20', end: '2026-09-25', label: 'Term 3' },
   4: { start: '2026-10-12', end: '2026-12-11', label: 'Term 4' },
+};
+
+/* Known due dates and statuses for specific internals, keyed by recordKey.
+   ---------------------------------------------------------------------------
+   These come from the student's own course outline, not from NZQA, so they live
+   here rather than in results.js. Applied when the planner is seeded, and
+   migrated once onto any planner item that has no date yet. Editing in the app
+   always wins afterwards.
+
+   `status` uses the PLANNER vocabulary (notstarted / inprogress / submitted /
+   graded), not the credit-record vocabulary.
+
+   ⚠️ Two of these are given as "Term 2, Week 9", which lands on 29 Jun 2026
+   with the term dates above. That is three days after the Term 2 end date
+   shipped in TERMS_2026, so Wellington College's Term 2 evidently runs slightly
+   longer than the typical dates used here. It does not matter much for those
+   two (both are already submitted), but adjust TERMS_2026 if you want the
+   calendar placement to be exact. */
+export const SEED_DATES = {
+  // handed in
+  '13CHE:3.1':  { dateMode: 'rough', term: 2, week: 9, status: 'submitted' },   // quantitative analysis
+  '13PHY:3.1':  { dateMode: 'rough', term: 2, week: 9, status: 'submitted' },   // practical investigation
+
+  // under way
+  '13PHY:3.5':  { dateMode: 'exact', date: '2026-08-07', status: 'inprogress' }, // Modern Physics
+  '13CHE:3.2':  { dateMode: 'exact', date: '2026-08-14', status: 'inprogress' }, // Spectroscopy
+  '13ENU:3.9':  { dateMode: 'rough', term: 3, week: 5, status: 'inprogress' },   // close reading
+  '13MAS:3.10': { dateMode: 'rough', term: 3, week: 6, status: 'inprogress' },   // formal inference
+
+  // not started
+  '13BIO:3.2':  { dateMode: 'rough', term: 3, week: 8, status: 'notstarted' },   // socio-scientific
+  '13ENU:3.7':  { dateMode: 'rough', term: 3, week: 9, status: 'notstarted' },   // connections
 };
 
 export const STATUSES = {
@@ -27,7 +59,7 @@ export const STATUSES = {
   graded:     { label: 'Graded',      colour: '#4FA97C', order: 3 },
 };
 
-/* Local YYYY-MM-DD. Deliberately NOT toISOString() — that converts local
+/* Local YYYY-MM-DD. Deliberately NOT toISOString(), that converts local
    midnight to UTC, which in NZ (UTC+12/13) rolls every date back a day. */
 function isoLocal(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

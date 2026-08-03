@@ -1,5 +1,5 @@
 /* ============================================================================
-   pages/flagged.js — "flagged for review" dashboard.
+   pages/flagged.js: "flagged for review" dashboard.
    Shows every topic flagged across all subjects, grouped by subject, with a
    one-click unflag. Also surfaces reviewed topics for a quick progress recap.
    ========================================================================== */
@@ -22,7 +22,7 @@ export function renderFlagged() {
     ? `<div class="placeholder">
         <div class="ph-icon">🎯</div>
         <h3>Nothing flagged</h3>
-        <p>When a topic needs more work, hit <b>Flag for review</b> on its page and it’ll show up here — your personal weak-spot list.</p>
+        <p>When a topic needs more work, hit <b>Flag for review</b> on its page and it’ll show up here: your personal weak-spot list.</p>
        </div>`
     : subjects.filter(s => bySubject[s.id]).map(s => `
         <div class="mb-5">
@@ -34,7 +34,7 @@ export function renderFlagged() {
               const std = standardByTopicId[id];
               const title = std ? std.title : id;
               return `<div class="std-row" style="cursor:default">
-                <span class="std-code">${std ? std.code : '—'}</span>
+                <span class="std-code">${std ? std.code : '–'}</span>
                 ${store.isAutoFlagged(id) ? '<span class="auto-badge" title="Flagged automatically because your quiz average on this topic is below 50%">auto</span>' : ''}
                 <a class="std-main" href="#/topic/${id}" data-link style="text-decoration:none;color:inherit">
                   <span class="std-title">${title}</span>

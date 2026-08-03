@@ -1,5 +1,5 @@
 /* ============================================================================
-   pages/revise.js — "Revision session": one continuous mixed-practice run.
+   pages/revise.js: "Revision session": one continuous mixed-practice run.
    ----------------------------------------------------------------------------
    Everything else on this site is organised by standard, which is how you
    study a topic for the first time. This page is the opposite: it deliberately
@@ -7,18 +7,19 @@
 
    Three pieces of learning science drive the queue:
 
-     • Retrieval practice — every item makes you produce an answer before you
+     • Retrieval practice. Every item makes you produce an answer before you
        see one. Nothing here is passive re-reading.
-     • Spacing — flashcards respect their Leitner box, so cards you keep
+     • Spacing. Flashcards respect their Leitner box, so cards you keep
        getting wrong come round again and again while solid ones stay away.
-     • Interleaving — items from different topics are shuffled together rather
+     • Interleaving. Items from different topics are shuffled together rather
        than blocked by topic. It feels harder and it works better, because you
        have to decide WHICH method applies, not just apply a known one.
 
    Weakest topics are over-sampled: a topic you average <60% on contributes
    roughly twice as many questions as one you've aced.
    ========================================================================== */
-import { enrolledSubjects as subjects, subjectById, allStandards, getSubjectContent } from '../registry.js';
+import { visibleSubjects, subjectById, allStandards, getSubjectContent } from '../registry.js';
+const subjects = () => visibleSubjects();
 import { store } from '../store.js';
 import { shuffle, toast, renderMathIn, normalise } from '../ui.js';
 import { isCardDue, nextBox, boxOf } from '../leitner.js';
@@ -78,7 +79,7 @@ function urgencyFor(subjectId, map) {
 
 /** Every topic in scope, with its cards, questions and current quiz average. */
 async function gatherPool(scope) {
-  const ids = scope === 'mixed' ? subjects.map(s => s.id) : [scope];
+  const ids = scope === 'mixed' ? subjects().map(s => s.id) : [scope];
   const pool = [];
   const dmap = daysBySubject();
 
@@ -87,7 +88,7 @@ async function gatherPool(scope) {
     if (!content || !content.topics) continue;
 
     for (const [topicId, topic] of Object.entries(content.topics)) {
-      /* A topic that isn't a formal standard won't be in allStandards — fall
+      /* A topic that isn't a formal standard won't be in allStandards. Fall
          back to the content module's own title rather than showing a raw
          topic id in the session summary. */
       const std = allStandards.find(s => s.topicId === topicId);
@@ -95,7 +96,7 @@ async function gatherPool(scope) {
         topicId, subjectId: sid,
         title: (std && std.title) || topic.title || topicId,
         code: (std && std.code) || '',
-        /* Finished internals drop out (or drop down) — see revision-scope.js */
+        /* Finished internals drop out (or drop down). See revision-scope.js */
         scopeInfo: revisionScope(topicId, topic),
         urgency: urgencyFor(sid, dmap),
         daysToAssessment: dmap[sid],
@@ -111,10 +112,10 @@ async function gatherPool(scope) {
 /* A topic's sampling weight.
    Two things raise it:
      • how weak you are on it   (never attempted, or a low quiz average)
-     • how SOON it is assessed  (see urgencyFor — the nearest deadline wins)   */
+     • how SOON it is assessed  (see urgencyFor. The nearest deadline wins)   */
 function weightFor(topic) {
   let w;
-  if (topic.avg === null) w = 2;         // unknown — worth probing
+  if (topic.avg === null) w = 2;         // unknown, worth probing
   else if (topic.avg < 50) w = 3;
   else if (topic.avg < 70) w = 2;
   else w = 1;
@@ -129,7 +130,7 @@ function weightFor(topic) {
 async function buildQueue(scope, length, mode = 'mixed', focus = 'all') {
   const fullPool = await gatherPool(scope);
   /* Content tied ONLY to an internal you have already handed in is dropped
-     entirely — there is no exam left to revise for. Anything that also feeds
+     entirely. There is no exam left to revise for. Anything that also feeds
      an external you still have to sit stays in (at reduced weight). */
   const skipped = fullPool.filter(t => t.scopeInfo && t.scopeInfo.scope === 'excluded');
   let pool = fullPool.filter(t => !(t.scopeInfo && t.scopeInfo.scope === 'excluded'));
@@ -152,7 +153,7 @@ async function buildQueue(scope, length, mode = 'mixed', focus = 'all') {
   const cardItems = [];
   for (const t of pool) {
     if (!t.cards.length) continue;
-    const session = store.fcPeekSession(t.topicId);   // peek — don't burn a session
+    const session = store.fcPeekSession(t.topicId);   // peek: don't burn a session
     const prog = store.fcProgress(t.topicId);
     const due = t.cards.map((_, i) => i).filter(i => isCardDue(prog, session, i));
     const idxs = due.length ? due : t.cards.map((_, i) => i);
@@ -246,9 +247,9 @@ export function renderRevise() {
   const html = `
   <div class="content-inner">
     ${pageHead({
-      eyebrow: '🎯 Revision session',
+      eyebrow: 'Revision session',
       title: 'Start a revision session',
-      lede: 'A mixed run of flashcards and practice questions. Topics you’re weakest on come up more — and so do subjects with the nearest assessment. Internals you’ve already handed in are left out entirely.',
+      lede: 'A mixed run of flashcards and practice questions. Topics you’re weakest on come up more, and so do subjects with the nearest assessment. Internals you’ve already handed in are left out entirely.',
     })}
 
     <form class="card rv-setup" id="rv-setup">
@@ -259,7 +260,7 @@ export function renderRevise() {
             <input type="radio" name="scope" value="mixed"${saved.scope === 'mixed' ? ' checked' : ''}>
             <span><strong>Everything</strong><em>all six subjects, mixed</em></span>
           </label>
-          ${subjects.map(s => `
+          ${subjects().map(s => `
             <label class="rv-chip">
               <input type="radio" name="scope" value="${s.id}"${saved.scope === s.id ? ' checked' : ''}>
               <span><strong>${s.icon} ${s.name}</strong><em>${s.standards.length} standards</em></span>
@@ -314,12 +315,12 @@ export function renderRevise() {
     </form>
 
     <div class="grid grid-3 mt-5">
-      <div class="card"><h4 class="mb-2">🔁 Retrieval, not re-reading</h4>
-        <p class="small muted">Every item makes you produce the answer first. Recognising an answer you’ve just read feels like knowing it — it isn’t.</p></div>
-      <div class="card"><h4 class="mb-2">🗓 Spacing built in</h4>
+      <div class="card"><h4 class="mb-2">Retrieval, not re-reading</h4>
+        <p class="small muted">Every item makes you produce the answer first. Recognising an answer you’ve just read feels like knowing it: it isn’t.</p></div>
+      <div class="card"><h4 class="mb-2">Spacing built in</h4>
         <p class="small muted">Cards you get wrong drop to Box 1 and come back next session. Cards you know sit in Box 4 and stay out of your way.</p></div>
-      <div class="card"><h4 class="mb-2">🔀 Interleaved on purpose</h4>
-        <p class="small muted">Topics are shuffled together so you have to work out <em>which</em> method applies — the bit exams actually test.</p></div>
+      <div class="card"><h4 class="mb-2">Interleaved on purpose</h4>
+        <p class="small muted">Topics are shuffled together so you have to work out <em>which</em> method applies: the bit exams actually test.</p></div>
     </div>
   </div>`;
 
@@ -339,10 +340,10 @@ export function renderRevise() {
         const { excluded } = await previewScope();
         el.innerHTML =
           (rows.length
-            ? '<strong>Nearest assessments</strong> — these subjects come up more often:<br>' +
+            ? '<strong>Nearest assessments</strong>. These subjects come up more often:<br>' +
               rows.map(({ s, d }) => {
                 const b = URGENCY.find(u => d <= u.within);
-                return `${s.icon} ${s.name} — ${d}d${b ? ` <span class="xs">(×${b.mult})</span>` : ''}`;
+                return `${s.icon} ${s.name}, ${d}d${b ? ` <span class="xs">(×${b.mult})</span>` : ''}`;
               }).join(' · ')
             : 'No upcoming assessments found.') +
           (excluded.length
@@ -434,7 +435,7 @@ function runSession(host, { items, skipped = [], scope }) {
     return `
       <div class="fc-scene rv-scene">
         <div class="fc-card ${flipped ? 'flipped' : ''}" id="rv-card" role="button" tabindex="0"
-             aria-label="Flashcard — press space to reveal the answer">
+             aria-label="Flashcard: press space to reveal the answer">
           <div class="fc-face fc-front">
             <span class="fc-tag">Question</span>
             <div class="fc-q">${c.q}</div>
@@ -444,7 +445,7 @@ function runSession(host, { items, skipped = [], scope }) {
             <span class="fc-tag">Answer</span>
             <div>
               <div class="fc-a">${c.a}</div>
-              ${c.explain ? `<details class="fc-explain-toggle"><summary>💡 Explain this answer</summary>
+              ${c.explain ? `<details class="fc-explain-toggle"><summary>Explain this answer</summary>
                  <div class="fc-explain-body">${c.explain}</div></details>` : ''}
             </div>
           </div>
@@ -453,14 +454,14 @@ function runSession(host, { items, skipped = [], scope }) {
       <div class="fc-controls">
         ${flipped ? `
           <div class="fc-grade">
-            <button class="btn btn-ghost btn-sm fc-dunno"  id="rv-back-dunno">🤷 Didn't know</button>
+            <button class="btn btn-ghost btn-sm fc-dunno"  id="rv-back-dunno">Didn't know</button>
             <button class="btn btn-ghost btn-sm fc-wrong"  id="rv-no">✗ Got it wrong</button>
             <button class="btn btn-ghost btn-sm fc-nearly" id="rv-nearly">◐ Nearly</button>
             <button class="btn btn-primary btn-sm"         id="rv-yes">✓ Got it right</button>
           </div>
           <span class="xs muted">1 = wrong · 2 = nearly · 3 = right</span>` : `
-          <div class="fc-nav"><button class="btn btn-ghost btn-sm fc-dunno" id="rv-dunno">🤷 I don't know</button></div>
-          <span class="xs muted">Answer it in your head first, then reveal — that effort is the whole point.</span>`}
+          <div class="fc-nav"><button class="btn btn-ghost btn-sm fc-dunno" id="rv-dunno">I don't know</button></div>
+          <span class="xs muted">Answer it in your head first, then reveal: that effort is the whole point.</span>`}
       </div>`;
   }
 
@@ -473,13 +474,13 @@ function runSession(host, { items, skipped = [], scope }) {
     no && no.addEventListener('click', e => { e.stopPropagation(); gradeCard(item, 'wrong'); });
     box.querySelector('#rv-nearly')?.addEventListener('click', e => { e.stopPropagation(); gradeCard(item, 'nearly'); });
     box.querySelector('#rv-back-dunno')?.addEventListener('click', e => { e.stopPropagation(); gradeCard(item, 'wrong'); });
-    /* Honest "don't know" — shows the answer, grades it wrong, moves on. */
+    /* Honest "don't know". Shows the answer, grades it wrong, moves on. */
     const dunno = box.querySelector('#rv-dunno');
     dunno && dunno.addEventListener('click', e => {
       e.stopPropagation(); flipped = true; render();
       const sc = box.querySelector('.fc-scene');
       if (sc) sc.insertAdjacentHTML('afterbegin',
-        '<p class="dunno-note">🤷 Marked as not known — back to Box 1.</p>');
+        '<p class="dunno-note">Marked as not known: back to Box 1.</p>');
       box.querySelector('#rv-no')?.focus({ preventScroll: true });
     });
 
@@ -499,7 +500,7 @@ function runSession(host, { items, skipped = [], scope }) {
     const session = sessionFor(tid);
     const prog = store.fcProgress(tid);
     store.fcGrade(tid, item.cardIndex, nextBox(boxOf(prog, item.cardIndex), g), session);
-    // 'nearly' counts as a half for the session score — neither a hit nor a miss
+    // 'nearly' counts as a half for the session score, neither a hit nor a miss
     log.push({ topicId: tid, title: item.topic.title, kind: 'card',
                correct: g === 'right', partial: g === 'nearly' });
     advance();
@@ -522,7 +523,7 @@ function runSession(host, { items, skipped = [], scope }) {
         <div class="quiz-explain" id="rv-explain"></div>
         <div class="quiz-foot">
           <span class="xs muted">${q.type === 'sa' ? 'Spelling and spacing are ignored' : 'Pick one'}</span>
-          <button class="btn btn-ghost btn-sm" id="rv-qdunno">🤷 I don't know</button>
+          <button class="btn btn-ghost btn-sm" id="rv-qdunno">I don't know</button>
           <button class="btn btn-primary hidden" id="rv-next">Next →</button>
         </div>
       </div>`;
@@ -584,7 +585,7 @@ function runSession(host, { items, skipped = [], scope }) {
     const q = item.q;
     box.querySelector('#rv-qdunno')?.classList.add('hidden');
     const ex = box.querySelector('#rv-explain');
-    ex.innerHTML = `<b>${correct ? '✓ Correct.' : dunno ? '🤷 No worries — here it is.' : '✗ Not quite.'}</b> ` +
+    ex.innerHTML = `<b>${correct ? '✓ Correct.' : dunno ? 'No worries: here it is.' : '✗ Not quite.'}</b> ` +
       `${!correct && q.type === 'sa' && q.answer ? `Answer: <b>${q.answer}</b>. ` : ''}` +
       `${q.explanation || ''} <a class="xs" href="#/topic/${item.topic.topicId}" data-link>study this topic →</a>`;
     ex.classList.add('show');
@@ -613,18 +614,17 @@ function runSession(host, { items, skipped = [], scope }) {
     document.onkeydown = null;
 
     /* Record question performance per topic so "Focus on this" learns from
-       this session too — but only for topics we actually asked about. */
+       this session too: but only for topics we actually asked about. */
     const byTopic = {};
     log.filter(l => l.kind === 'q').forEach(l => {
       (byTopic[l.topicId] ??= { title: l.title, right: 0, total: 0 });
       byTopic[l.topicId].total++;
       if (l.correct) byTopic[l.topicId].right++;
     });
-    /* No streak call here. Every graded item already counts as it happens —
-       fcGrade() for cards, saveQuiz() just above for questions, both via
+    /* No streak call here. Every graded item already counts as it happens. FcGrade() for cards, saveQuiz() just above for questions, both via
        store.recordStudy(). A session-level call would double-count, and the
        one that used to sit here (store.touchStreak) never existed, so finish()
-       threw before it could render the summary — which is why "End session"
+       threw before it could render the summary, which is why "End session"
        looked like a dead button and completing a run showed nothing. */
     Object.entries(byTopic).forEach(([tid, r]) => store.saveQuiz(tid, r.right, r.total));
 
@@ -648,7 +648,7 @@ function runSession(host, { items, skipped = [], scope }) {
     const msg = !log.length ? 'Session ended before you answered anything.'
       : pct >= 90 ? 'Excellent. That material is genuinely in there.'
       : pct >= 70 ? 'Solid session. The misses below are your next hour of work.'
-      : pct >= 50 ? 'Fair — but the topics below need a proper re-read, not another quiz.'
+      : pct >= 50 ? 'Fair, but the topics below need a proper re-read, not another quiz.'
       : 'Rough one, and that’s useful information: go back to the teaching notes for these.';
 
     box.innerHTML = `
@@ -676,7 +676,7 @@ function runSession(host, { items, skipped = [], scope }) {
                   <span class="fi-sub">${t.right} of ${t.total} right this session</span></span>
                 <span class="xs muted nowrap">study →</span>
               </a>`).join('')}
-          </div>` : log.length ? `<p class="muted mb-5">Clean sweep — nothing dropped.</p>` : ''}
+          </div>` : log.length ? `<p class="muted mb-5">Clean sweep: nothing dropped.</p>` : ''}
 
         <div class="flex gap-3 wrap" style="justify-content:center">
           <button class="btn btn-primary" id="rv-again">↻ Another session</button>
@@ -688,6 +688,6 @@ function runSession(host, { items, skipped = [], scope }) {
       </div>`;
 
     box.querySelector('#rv-again').addEventListener('click', () => { location.hash = '#/revise'; });
-    if (pct === 100 && log.length >= 5) toast('Perfect session 🎉');
+    if (pct === 100 && log.length >= 5) toast('Perfect session');
   }
 }

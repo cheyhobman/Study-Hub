@@ -1,5 +1,5 @@
 /* ============================================================================
-   English — condensed quick-reference sheet (printable).
+   English: condensed quick-reference sheet (printable).
    Grade criteria · technique checklists · sentence starters.
    ========================================================================== */
 export default {
@@ -9,9 +9,9 @@ export default {
       title: 'Grade criteria (both standards)',
       blocks: [
         { t: 'html', html: '<ul>' +
-          '<li><b>Achieved</b> — respond <i>critically</i>: reasoned personal response, supported with specific evidence.</li>' +
-          '<li><b>Merit</b> — <i>…convincingly</i>: developed, coherent, evidence integrated.</li>' +
-          '<li><b>Excellence</b> — <i>…perceptively</i>: insight — purpose, viewer/reader positioning, wider world.</li>' +
+          '<li><b>Achieved</b>, respond <i>critically</i>: reasoned personal response, supported with specific evidence.</li>' +
+          '<li><b>Merit</b>, <i>…convincingly</i>: developed, coherent, evidence integrated.</li>' +
+          '<li><b>Excellence</b>, <i>…perceptively</i>: insight, purpose, viewer/reader positioning, wider world.</li>' +
           '<li>Every paragraph: technique → evidence → <b>effect</b> → link (don’t retell plot).</li>' +
         '</ul>' },
       ],

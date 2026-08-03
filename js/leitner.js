@@ -1,10 +1,10 @@
 /* ============================================================================
-   leitner.js — the spaced-repetition schedule, in ONE place.
+   leitner.js: the spaced-repetition schedule, in ONE place.
    ----------------------------------------------------------------------------
    Every card sits in a box 1–4. The box decides how many sessions must pass
    before the card is due again:
 
-       box 1 → every session        (you got it wrong — drill it)
+       box 1 → every session        (you got it wrong. Drill it)
        box 2 → every 2nd session
        box 3 → every 4th session
        box 4 → every 8th session    (you know it cold)
@@ -13,14 +13,14 @@
    back to box 1, so weak cards resurface far more often than strong ones.
 
    Both the per-topic deck (flashcards.js) and the mixed revision session
-   (pages/revise.js) grade cards, and they MUST agree — if the two ever used
+   (pages/revise.js) grade cards, and they MUST agree. If the two ever used
    different intervals the same card would be due in one place and not the
    other. Tune the schedule here and both follow.
    ========================================================================== */
 
 export const BOX_INTERVAL = { 1: 1, 2: 2, 3: 4, 4: 8 };   // legacy: sessions
 /* Calendar days between reviews for each box. Time passing is what actually
-   causes forgetting — the old scheme counted how many times you had OPENED a
+   causes forgetting. The old scheme counted how many times you had OPENED a
    deck, so a subject you ignored for three weeks never became more due. */
 export const BOX_DAYS = { 1: 1, 2: 3, 3: 7, 4: 16 };
 export const MAX_BOX = 4;
@@ -47,7 +47,7 @@ export function boxOf(progress, index) {
  */
 export function isCardDue(progress, session, index) {
   const p = progress[index];
-  if (!p) return true;                                  // never seen — always due
+  if (!p) return true;                                  // never seen, always due
   if (p.lastSeen) return daysSince(p.lastSeen) >= BOX_DAYS[p.box || 1];
   return (session - p.lastSession) >= BOX_INTERVAL[p.box || 1];   // legacy
 }

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Calculus — content module. Wires topicId → per-topic content (calculus/*.js).
+   Calculus: content module. Wires topicId → per-topic content (calculus/*.js).
    ========================================================================== */
 import complex from './calculus/complex.js';
 import differentiation from './calculus/differentiation.js';

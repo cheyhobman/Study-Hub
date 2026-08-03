@@ -1,8 +1,8 @@
 /* ============================================================================
-   chemistry/mechanisms-svg.js — curly-arrow mechanism diagrams.
+   chemistry/mechanisms-svg.js: curly-arrow mechanism diagrams.
    ----------------------------------------------------------------------------
    These are drawn properly, not decoratively:
-     • Every curly arrow STARTS at a real electron source — either a lone pair
+     • Every curly arrow STARTS at a real electron source, either a lone pair
        (drawn as two dots) or the midpoint of a bond (drawn as a real line).
      • Every arrow ENDS at the atom/bond where the new bond forms, or at the
        atom that takes the electrons.
@@ -125,7 +125,7 @@ export const ADDITION_SVG = `
   <text class="rxn" x="366" y="126">⟶</text>
 
   <!-- ============ INTERMEDIATE ============ -->
-  <text class="atom" x="410" y="118">CH₃—CH₂</text>
+  <text class="atom" x="410" y="118">CH₃, CH₂</text>
   <text class="sub"  x="504" y="106">+</text>
   <text class="atom" x="410" y="150">+  Br</text>
   <text class="sub"  x="462" y="138">−</text>

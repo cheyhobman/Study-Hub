@@ -1,14 +1,14 @@
 /* ============================================================================
-   pages/calendar.js — the whole year on a month grid.
+   pages/calendar.js: the whole year on a month grid.
    ----------------------------------------------------------------------------
    Same three sources as the dashboard strip (js/deadlines.js): planner
    internals, derived-grade exams and the real externals. The strip answers
-   "what's next"; this answers "how is it all spaced out" — which is the
+   "what's next"; this answers "how is it all spaced out", which is the
    question you actually need when deciding what to work on in September.
 
    Colour follows the site's existing language rather than inventing a new one:
      • the DOT on each entry is the SUBJECT accent (from data/subjects.js)
-     • the entry's shape tells you the KIND — internals are filled, derived
+     • the entry's shape tells you the KIND. Internals are filled, derived
        exams are outlined, externals are solid phthalo
    so a glance shows both "which subject" and "how serious".
 
@@ -16,7 +16,7 @@
    across the days they span. Undated internals can't be placed, so they are
    listed underneath rather than silently dropped.
    ========================================================================== */
-import { subjectById } from '../registry.js';
+import { subjectById, subjectMeta } from '../registry.js';
 import { store } from '../store.js';
 import { undatedInternals, KINDS } from '../deadlines.js';
 import { myExternalExams as externalExams, myDerivedExams as derivedExams } from '../registry.js';
@@ -33,7 +33,7 @@ const todayIso = () => iso(new Date());
 
 /* ---- gather every dated item, including multi-day spans -------------------
    upcomingDeadlines() drops anything already past, which is wrong for a
-   calendar — you still want to see that Chemistry 3.1 was handed in. So we
+   calendar. You still want to see that Chemistry 3.1 was handed in. So we
    rebuild from the same sources with no time filter. */
 function allEvents() {
   const out = [];
@@ -124,7 +124,7 @@ function monthGrid(monthDate, events, filter) {
       <div class="cal-cell${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${on.length ? ' has-events' : ''}">
         <div class="cal-daynum">${d}</div>
         ${on.map(e => {
-          const s = subjectById[e.subject] || {};
+          const s = subjectMeta(e.subject);
           const startsHere = date === e.start;
           const mid = e.span && !startsHere;   // every day after the first
           const tip = [e.title, e.code, e.time, e.statusLabel]
@@ -143,8 +143,7 @@ function monthGrid(monthDate, events, filter) {
   }
 
   /* Events STARTING in this month, for the phone list below the grid. On a
-     narrow screen a 49px cell can't hold a label, so the grid shows dots only
-     — and a dot with no hover (touch has none) tells you nothing. The list
+     narrow screen a 49px cell can't hold a label, so the grid shows dots only, and a dot with no hover (touch has none) tells you nothing. The list
      carries the detail; CSS shows one or the other, never both. */
   const mKey = `${y}-${String(m + 1).padStart(2, '0')}`;
   const starting = events
@@ -155,7 +154,7 @@ function monthGrid(monthDate, events, filter) {
     && e.start.slice(0, 7) <= mKey && e.end.slice(0, 7) >= mKey);
 
   const list = starting.map(e => {
-    const s = subjectById[e.subject] || {};
+    const s = subjectMeta(e.subject);
     const day = Number(e.start.slice(8, 10));
     const when = e.span && e.end !== e.start
       ? `${day}–${Number(e.end.slice(8, 10))}`
@@ -171,7 +170,6 @@ function monthGrid(monthDate, events, filter) {
 
   return `
     <section class="cal-month${hasAny ? '' : ' cal-quiet'}">
-      <h3 class="cal-mtitle">${MONTHS[m]} <span class="xs muted">${y}</span></h3>
       <div class="cal-grid">
         ${DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}
         ${cells.join('')}
@@ -180,10 +178,37 @@ function monthGrid(monthDate, events, filter) {
     </section>`;
 }
 
+/* Repaint the grid and the filter chips in place. Used by the type filters and
+   the month navigation, both of which must not disturb scroll position. */
+function repaintCalendar() {
+  const v = renderCalendar();
+  const holder = document.createElement('div');
+  holder.innerHTML = v.html;
+  const oldInner = document.querySelector('#content .content-inner');
+  const newInner = holder.querySelector('.content-inner');
+  if (!oldInner || !newInner) return;
+  const y = window.scrollY;
+  oldInner.replaceWith(newInner);
+  v.onMount();
+  window.scrollTo(0, y);
+}
+
 export function renderCalendar() {
   const filter = store.calFilter ? store.calFilter() : 'all';
   const events = allEvents();
   const months = monthRange(events);
+
+  /* ONE month at a time, with prev/next. Showing the whole year at once meant
+     scrolling past four grids to find the one you wanted, and on a phone that
+     was most of a screen each. The viewed month is remembered between visits. */
+  const todayKey = todayIso().slice(0, 7);
+  const keys = months.map(d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  let cursor = store.calMonth();
+  if (!keys.includes(cursor)) cursor = keys.includes(todayKey) ? todayKey : keys[0];
+  const idx = keys.indexOf(cursor);
+  const shown = months[idx];
+  const prevKey = idx > 0 ? keys[idx - 1] : null;
+  const nextKey = idx < keys.length - 1 ? keys[idx + 1] : null;
   const undated = undatedInternals();
 
   const counts = {
@@ -223,7 +248,16 @@ export function renderCalendar() {
     </div>
 
     ${events.length
-      ? `<div class="cal-months">${months.map(mo => monthGrid(mo, events, filter)).join('')}</div>`
+      ? `<div class="cal-nav">
+           <button class="btn btn-ghost btn-sm" id="cal-prev" ${prevKey ? '' : 'disabled'}
+                   aria-label="Previous month">‹</button>
+           <div class="cal-nav-title">${MONTHS[shown.getMonth()]} <span class="muted">${shown.getFullYear()}</span></div>
+           <button class="btn btn-ghost btn-sm" id="cal-next" ${nextKey ? '' : 'disabled'}
+                   aria-label="Next month">›</button>
+           ${cursor !== todayKey && keys.includes(todayKey)
+             ? `<button class="btn btn-ghost btn-sm" id="cal-today">Today</button>` : ''}
+         </div>
+         <div class="cal-months one-month">${monthGrid(shown, events, filter)}</div>`
       : `<div class="empty-state">
            <div class="es-icon">📆</div>
            <h3>Nothing to show yet</h3>
@@ -236,8 +270,7 @@ export function renderCalendar() {
         <div class="co-icon">ℹ</div>
         <div class="co-body">
           <h4>${undated.length} internal${undated.length === 1 ? '' : 's'} not on the calendar</h4>
-          <div>${undated.map(i => `<strong>${esc(i.code || i.title)}</strong>`).join(', ')} —
-            ${undated.length === 1 ? 'it has' : 'they have'} no date set, so ${undated.length === 1 ? 'it' : 'they'}
+          <div>${undated.map(i => `<strong>${esc(i.code || i.title)}</strong>`).join(', ')}, ${undated.length === 1 ? 'it has' : 'they have'} no date set, so ${undated.length === 1 ? 'it' : 'they'}
             can't be placed. <a href="#/internals" data-link>Add ${undated.length === 1 ? 'a date' : 'dates'} →</a></div>
         </div>
       </div>` : ''}
@@ -250,21 +283,27 @@ export function renderCalendar() {
   return {
     html,
     onMount() {
+      /* Swap only the month grid, keeping scroll position, replacing the whole
+         of #content threw the reader back to the top on every filter click. */
       document.querySelectorAll('[data-cal-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
           store.setCalFilter(btn.dataset.calFilter);
-          const v = renderCalendar();
-          document.getElementById('content').innerHTML = v.html;
-          v.onMount();
+          repaintCalendar();
         });
       });
       /* Deliberately NOT auto-scrolling to today: the router resets every page
          to the top (see router.js positionPage) and an automatic scroll here
          would fight it. Jumping is an explicit choice instead. */
-      document.getElementById('cal-today')?.addEventListener('click', () => {
-        const t = document.querySelector('.cal-cell.is-today') || document.querySelector('.cal-month');
-        t?.closest('.cal-month')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      });
+      const go = (key) => { store.setCalMonth(key); repaintCalendar(); };
+      document.getElementById('cal-prev')?.addEventListener('click', () => prevKey && go(prevKey));
+      document.getElementById('cal-next')?.addEventListener('click', () => nextKey && go(nextKey));
+      document.getElementById('cal-today')?.addEventListener('click', () => go(todayKey));
+      /* Arrow keys page the calendar when nothing else has focus. */
+      document.onkeydown = (e) => {
+        if (e.target.matches('input,textarea,select')) return;
+        if (e.key === 'ArrowLeft' && prevKey) go(prevKey);
+        if (e.key === 'ArrowRight' && nextKey) go(nextKey);
+      };
     },
   };
 }

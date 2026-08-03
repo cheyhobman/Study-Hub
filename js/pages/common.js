@@ -1,9 +1,9 @@
 /* ============================================================================
-   pages/common.js — small render helpers shared across page views.
+   pages/common.js: small render helpers shared across page views.
    ========================================================================== */
 import { icons } from '../ui.js';
 
-/** Breadcrumb trail. items = [{label, href?}] — the last item is the current page. */
+/** Breadcrumb trail. items = [{label, href?}]: the last item is the current page. */
 export function crumbs(items) {
   return `<nav class="crumbs">${items.map((it, i) => {
     const sep = i < items.length - 1 ? '<span class="sep">/</span>' : '';
@@ -45,7 +45,7 @@ export function fmtDate(iso) {
 export { icons };
 
 /* ============================================================================
-   Section tabs — the nav groups two pairs of pages together so the sidebar
+   Section tabs. The nav groups two pairs of pages together so the sidebar
    stays at five items. The tabs are REAL LINKS to real routes rather than
    JS-switched panes: that keeps deep links and the back button working, and
    it means a page like My Internals can re-render itself freely without
@@ -56,7 +56,7 @@ export const NAV_GROUPS = {
     navKey: 'exams-group',
     tabs: [
       { key: 'internals', label: '📝 My internals', href: '#/internals' },
-      { key: 'calendar',  label: '📆 Calendar',       href: '#/calendar' },
+      { key: 'calendar',  label: 'Calendar',       href: '#/calendar' },
       { key: 'timetable', label: '📅 Exam timetable', href: '#/exams' },
     ],
   },

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Physics — condensed formula & quick-reference sheet (printable)
+   Physics, condensed formula & quick-reference sheet (printable)
    Mirrors the official NCEA L3 Physics resource/formula sheet groupings.
    ========================================================================== */
 export default {
