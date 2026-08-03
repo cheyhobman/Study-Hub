@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NCEA L3 Study Hub</title>
+  <meta name="description" content="A personal NCEA Level 3 study hub — teaching notes, flashcards, practice questions, credit tracking and deadline planning." />
+
+  <!-- Fonts: Fraunces (characterful serif, headings) + Inter (body) + JetBrains Mono (formulas) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- KaTeX: proper maths/chemistry typesetting (mhchem adds \ce{} for formulae) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+          integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"
+          integrity="sha384-D1seVL2iPCxAOR7fZmqQjLGKKKZ26MZ0PPfoBn8SFAowGDb4LWZxc7NeJ0zXTRDW" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/print.css" />
+
+  <!-- Set theme before paint to avoid a flash of the wrong theme -->
+  <script>
+    (function () {
+      try {
+        // store.js persists with JSON.stringify, so the raw value is '"dark"'
+        // (quotes included). Parse it, or the attribute never matches the CSS.
+        var raw = localStorage.getItem('ncea.theme');
+        var t = null;
+        if (raw) { try { t = JSON.parse(raw); } catch (e2) { t = raw; } }
+        if (t !== 'dark' && t !== 'light') {
+          t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23123524'/%3E%3Ctext x='16' y='22' font-size='18' font-family='Georgia' text-anchor='middle' fill='%232D8A5F' font-weight='bold'%3EN%3C/text%3E%3C/svg%3E" />
+</head>
+<body data-subject="">
+  <a class="skip-link" href="#content">Skip to main content</a>
+  <div class="app">
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#/" data-link>
+        <span class="brand-mark">N</span>
+        <span class="brand-text">
+          <strong>Study Hub</strong>
+          <span id="brand-sub">NCEA Level 3</span>
+        </span>
+      </a>
+
+      <div class="nav-label">Dashboard</div>
+      <nav class="nav" id="nav-top"><!-- home / flagged injected by JS --></nav>
+
+      <div class="nav-label">Subjects</div>
+      <nav class="nav" id="nav-subjects"><!-- injected by JS --></nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-progress">
+          <a class="sp-link" id="sidebar-progress" href="#/progress" data-link>
+            <div class="sp-label"><span>Standards reviewed</span><b id="sp-count">0 / 0</b></div>
+            <div class="progress progress-mini"><span id="sp-bar" style="width:0%"></span></div>
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-toggle" id="menu-toggle" aria-label="Open navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+
+        <div class="search-wrap">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" class="search-input" id="search-input" placeholder="Search all subjects, topics, formulas…" autocomplete="off" aria-label="Search" />
+          <span class="search-kbd">/</span>
+          <div class="search-results" id="search-results" role="listbox"></div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg class="icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="content" id="content" tabindex="-1">
+        <!-- Views rendered here by the router -->
+        <div class="content-inner"><p class="muted">Loading…</p></div>
+      </main>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <div class="toast" id="toast"></div>
+
+  <!-- App entry point (ES modules) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

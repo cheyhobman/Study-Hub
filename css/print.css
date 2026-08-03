@@ -1,0 +1,46 @@
+/* ============================================================================
+   Print styles — optimised for the formula / quick-reference sheets.
+   Hides chrome (sidebar, topbar, toolbars), flattens to black-on-white,
+   and keeps tables/formulas from breaking awkwardly across pages.
+   ========================================================================== */
+@media print {
+  @page { margin: 14mm; }
+
+  :root {
+    --bg:#fff; --surface:#fff; --surface-2:#fff; --bg-tint:#fff;
+    --text:#000; --text-strong:#000; --muted:#333; --faint:#555;
+    --border:#bbb; --border-strong:#999;
+    --accent:#123524; --accent-strong:#0C2418; --accent-bright:#1B5E3F; --accent-soft:#f0f0f0;
+  }
+
+  body { background:#fff; color:#000; font-size: 11pt; }
+
+  /* Hide app chrome + interactive bits */
+  .sidebar, .topbar, .backdrop, .toast,
+  .topic-toolbar, .toc, .quiz, .search-results,
+  .no-print, .btn, .toggle-btn { display: none !important; }
+
+  .app { display:block; }
+  .content { padding: 0 !important; }
+  .content-inner { max-width: none; animation: none; }
+  .topic-layout { display:block; }
+
+  a { color:#000; text-decoration:none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color:#555; word-break: break-all; }
+
+  .card, .formula-item, .table-wrap, .keypoints, .callout, .example {
+    box-shadow:none !important; break-inside: avoid;
+  }
+  table.data { break-inside: auto; }
+  table.data tr { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+
+  /* Print-only helper to show reference sheet in a tight 2-column layout */
+  .print-columns { column-count: 2; column-gap: 16mm; }
+  .print-columns > * { break-inside: avoid; }
+  .print-title { display:block !important; margin-bottom: 6mm; border-bottom:2px solid #123524; padding-bottom:3mm; }
+}
+
+/* Screen hint on reference pages */
+.print-title { display:none; }
+.print-hint { font-size: var(--fs-sm); color: var(--muted); }
