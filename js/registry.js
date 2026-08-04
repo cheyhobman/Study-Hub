@@ -47,8 +47,48 @@ export const enrolledStandards = (() => {
    badge, the dashboard strip, the calendar, the exam tables) reads these, so
    they can never disagree with each other. */
 const enrolledIds = new Set(enrolledSubjects.map(s => s.id));
-export const myExternalExams = externalExams.filter(e => enrolledIds.has(e.subject));
-export const myDerivedExams  = derivedExams.filter(e => enrolledIds.has(e.subject));
+
+/* An exam sitting only exists if the student still has an EXTERNAL standard in
+   that subject that they have not removed and have not already passed.
+   ---------------------------------------------------------------------------
+   These used to be plain arrays filtered once at module load against the
+   enrolled list, which made them wrong in three ways: deleting every external
+   for a subject on the Progress page left its exam sitting on the calendar,
+   a subject added from the catalogue never gained one, and an external already
+   passed in a previous year still counted down as if it were coming.
+
+   They are FUNCTIONS now because hidden standards live in localStorage and can
+   change at any moment: a value captured at import time cannot follow them. */
+function sittingSubjects() {
+  const hidden = new Set(store.hiddenStandards());
+  const record = [...results, ...store.extraStandards()];
+  const live = new Set();
+  record.forEach(r => {
+    if (String(r.assess || '').toLowerCase() !== 'external') return;
+    if (hidden.has(`${r.group}:${r.code}`)) return;   // removed on Progress
+    if (r.status === 'achieved') return;              // already sat and passed
+    const sub = groupForSubjectReverse(r.group) || (r.subject || '').trim().toLowerCase();
+    if (sub) live.add(sub);
+  });
+  return live;
+}
+
+/* group code ("13CHE") back to a subject id ("chemistry"). */
+const SUBJECT_OF_GROUP = { '13CHE': 'chemistry', '13PHY': 'physics', '13MAC': 'calculus',
+                           '13MAT': 'calculus', '13MAS': 'statistics', '13BIO': 'biology',
+                           '13ENU': 'english', '13ENG': 'english' };
+function groupForSubjectReverse(group) { return SUBJECT_OF_GROUP[group] || null; }
+
+export function myExternalExams() {
+  const live = sittingSubjects();
+  return externalExams.filter(e => live.has(e.subject));
+}
+export function myDerivedExams() {
+  /* A derived-grade exam is a fallback sitting for the SAME externals, so it
+     follows exactly the same rule. No externals left, no derived exam. */
+  const live = sittingSubjects();
+  return derivedExams.filter(e => live.has(e.subject));
+}
 
 /* topicId prefix -> subject id (lets us resolve content even for extra
    sub-pages that aren't tied to a formal standard). */

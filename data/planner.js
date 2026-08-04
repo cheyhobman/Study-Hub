@@ -10,15 +10,45 @@
    period is converted to an approximate date from the term calendar below.
    ========================================================================== */
 
-/* NZ state-school term start Mondays for 2026.
-   ⚠️ These are typical dates: individual schools vary by a few days.
-   Edit them here if Wellington College's calendar differs. */
+/* Wellington College term dates for 2026.
+   ---------------------------------------------------------------------------
+   Term 2's end was corrected from 26 Jun to 3 Jul once the actual holiday dates
+   came in: the Term 2 holidays run 4–19 July, so classes must run to the 3rd.
+   That also resolves the old warning in this file about "Term 2, Week 9"
+   apparently landing after the term had finished. It hadn't; the end date was
+   simply a week early. Terms 3 and 4 already agreed with the holiday dates. */
 export const TERMS_2026 = {
   1: { start: '2026-02-02', end: '2026-04-02', label: 'Term 1' },
-  2: { start: '2026-04-20', end: '2026-06-26', label: 'Term 2' },
+  2: { start: '2026-04-20', end: '2026-07-03', label: 'Term 2' },
   3: { start: '2026-07-20', end: '2026-09-25', label: 'Term 3' },
   4: { start: '2026-10-12', end: '2026-12-11', label: 'Term 4' },
 };
+
+/* ---- School holidays ------------------------------------------------------
+   Confirmed Wellington College dates. Both ends are INCLUSIVE: the first day
+   is the first day off, the last day is the last day off, so classes resume
+   the following day. Shown as shaded bands on the calendar so a due date that
+   lands in a holiday is obvious at a glance. */
+export const HOLIDAYS_2026 = [
+  { name: 'Term 2 holidays', start: '2026-07-04', end: '2026-07-19' },
+  { name: 'Term 3 holidays', start: '2026-09-26', end: '2026-10-11' },
+];
+
+/* ---- Study leave ----------------------------------------------------------
+   ⚠️ ESTIMATED, not confirmed by the school. Worked out as follows:
+
+     END:   the last day of the NCEA external examination period. Derived from
+            the real timetable in data/exams.js (studyLeave() below), so it can
+            never drift out of step with the exam dates themselves.
+     START: senior classes at NZ secondary schools finish shortly before the
+            externals begin, and Year 13s go on study leave the next school day.
+            The first external in the 2026 timetable is 11 November, and the
+            standard pattern is roughly a fortnight of leave beforehand, which
+            puts the last day of senior classes at Friday 30 October 2026.
+
+   If the school publishes a different date, change SENIOR_LAST_DAY and
+   everything downstream (the calendar band, the countdown) follows. */
+export const SENIOR_LAST_DAY = '2026-10-30';
 
 /* Known due dates and statuses for specific internals, keyed by recordKey.
    ---------------------------------------------------------------------------
@@ -125,4 +155,18 @@ export function sortByDue(items) {
     if (db) return 1;
     return (a.title || '').localeCompare(b.title || '');
   });
+}
+
+
+/* Study leave as a single dated band. Kept as a FUNCTION so the end date is
+   read from the live exam timetable rather than copied and left to rot. */
+export function studyLeave(externalExamDates = []) {
+  const last = externalExamDates
+    .map(d => String(d).slice(0, 10))
+    .sort()
+    .pop();
+  if (!last) return null;
+  const start = new Date(SENIOR_LAST_DAY + 'T00:00');
+  start.setDate(start.getDate() + 1);            // leave begins the next day
+  return { name: 'Study leave', start: isoLocal(start), end: last, estimated: true };
 }

@@ -331,8 +331,13 @@ export function renderRevise() {
       (async () => {
         const el = document.getElementById('rv-priority-body');
         if (!el) return;
+        /* Anything that throws in here used to leave the panel reading
+           "Loading…" forever, because a rejected IIFE is silent. Fall back to
+           the static explanation instead: it is always true, it just can't
+           name your nearest assessments. */
+        try {
         const map = daysBySubject();
-        const rows = subjects
+        const rows = subjects()
           .map(s => ({ s, d: map[s.id] }))
           .filter(x => x.d !== undefined)
           .sort((a, b) => a.d - b.d)
@@ -349,6 +354,11 @@ export function renderRevise() {
           (excluded.length
             ? `<br><br><strong>Left out</strong> (handed in): ${excluded.map(e => e.title).join(', ')}.`
             : '');
+        } catch (err) {
+          console.error('priority panel', err);
+          el.innerHTML = 'Weakest topics come up more often, and so do subjects with '
+            + 'the nearest assessment. Internals you have already handed in are left out.';
+        }
       })();
 
       const form = document.getElementById('rv-setup');

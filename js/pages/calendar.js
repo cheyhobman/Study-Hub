@@ -22,7 +22,8 @@ import { undatedInternals, KINDS } from '../deadlines.js';
 import { myExternalExams as externalExams, myDerivedExams as derivedExams } from '../registry.js';
 import { esc } from '../ui.js';
 import { pageHead, sectionTabs } from './common.js';
-import { STATUSES, roughToDate } from '../../data/planner.js';
+import { STATUSES, roughToDate, HOLIDAYS_2026, studyLeave } from '../../data/planner.js';
+import { externalExams as allExternalExams } from '../registry.js';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -38,6 +39,9 @@ const todayIso = () => iso(new Date());
 function allEvents() {
   const out = [];
 
+  /* Finished internals stay on the grid as history (they are drawn muted via
+     `done`), but they must never drive "what's coming", the nav badge or the
+     next-up tile. That filtering lives in deadlines.js. */
   store.internals().forEach(i => {
     const st = STATUSES[i.status] || STATUSES.notstarted;
     const base = { kind: 'internal', subject: i.subject, title: i.title,
@@ -57,7 +61,7 @@ function allEvents() {
 
   /* Exams use the SHORT subject name in the cell (a whole AS list will never
      fit in a 40px box) and keep the full detail in the hover title. */
-  derivedExams.forEach(e => {
+  derivedExams().forEach(e => {
     const s = subjectById[e.subject] || {};
     out.push({
       kind: 'derived', subject: e.subject,
@@ -68,7 +72,7 @@ function allEvents() {
     });
   });
 
-  externalExams.forEach(e => {
+  externalExams().forEach(e => {
     const s = subjectById[e.subject] || {};
     out.push({
       kind: 'external', subject: e.subject,
@@ -102,7 +106,22 @@ function monthRange(events) {
 }
 
 /* ---- one month grid ---- */
-function monthGrid(monthDate, events, filter) {
+/* Non-assessment bands drawn UNDER the events: school holidays and study
+   leave. They are background context, not things you have to do, so they shade
+   the cell rather than taking a row inside it. Study leave is derived from the
+   real exam timetable (see data/planner.js) and marked as an estimate. */
+function bands() {
+  const out = HOLIDAYS_2026.map(h => ({ ...h, type: 'holiday' }));
+  const sl = studyLeave(allExternalExams.map(e => e.date));
+  if (sl) out.push({ ...sl, type: 'studyleave' });
+  return out;
+}
+
+function bandOn(date, all) {
+  return all.find(b => date >= b.start && date <= b.end) || null;
+}
+
+function monthGrid(monthDate, events, filter, allBands = []) {
   const y = monthDate.getFullYear(), m = monthDate.getMonth();
   const first = new Date(y, m, 1);
   const daysIn = new Date(y, m + 1, 0).getDate();
@@ -119,10 +138,15 @@ function monthGrid(monthDate, events, filter) {
                                && date >= e.start && date <= e.end);
     const isToday = date === today;
     const isPast = date < today;
+    const band = bandOn(date, allBands);
+    const bandStarts = band && (date === band.start || d === 1);
 
     cells.push(`
-      <div class="cal-cell${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${on.length ? ' has-events' : ''}">
+      <div class="cal-cell${isToday ? ' is-today' : ''}${isPast ? ' is-past' : ''}${on.length ? ' has-events' : ''}${
+        band ? ` in-band band-${band.type}` : ''}"${
+        band ? ` title="${esc(band.name + (band.estimated ? ' (estimated)' : ''))}"` : ''}>
         <div class="cal-daynum">${d}</div>
+        ${bandStarts ? `<div class="cal-band-label">${esc(band.name)}${band.estimated ? ' ~' : ''}</div>` : ''}
         ${on.map(e => {
           const s = subjectMeta(e.subject);
           const startsHere = date === e.start;
@@ -222,6 +246,8 @@ export function renderCalendar() {
     <button class="due-chip${filter === key ? ' on' : ''}" data-cal-filter="${key}"
             aria-pressed="${filter === key}">${label}<span class="dc-n">${n}</span></button>`;
 
+  const calBands = bands();
+
   const html = `
   <div class="content-inner">
     ${sectionTabs('exams', 'calendar')}
@@ -244,6 +270,8 @@ export function renderCalendar() {
         <span class="cl-key"><span class="cl-swatch k-derived"></span> derived</span>
         <span class="cl-key"><span class="cl-swatch k-external"></span> external</span>
         <span class="cl-key"><span class="cl-swatch cl-today"></span> today</span>
+        <span class="cl-key"><span class="cl-swatch cl-holiday"></span> holidays</span>
+        <span class="cl-key"><span class="cl-swatch cl-studyleave"></span> study leave (est.)</span>
       </div>
     </div>
 
@@ -257,7 +285,7 @@ export function renderCalendar() {
            ${cursor !== todayKey && keys.includes(todayKey)
              ? `<button class="btn btn-ghost btn-sm" id="cal-today">Today</button>` : ''}
          </div>
-         <div class="cal-months one-month">${monthGrid(shown, events, filter)}</div>`
+         <div class="cal-months one-month">${monthGrid(shown, events, filter, calBands)}</div>`
       : `<div class="empty-state">
            <div class="es-icon">📆</div>
            <h3>Nothing to show yet</h3>

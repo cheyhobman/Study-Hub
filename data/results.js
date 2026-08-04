@@ -1,41 +1,54 @@
 /* ============================================================================
-   results.js: Chey's REAL NZQA Record of Learning (transcribed 1 Aug 2026).
+   results.js: the COURSE STRUCTURE for the six Level 3 subjects.
    ----------------------------------------------------------------------------
-   This seeds the Progress page so credit totals are accurate out of the box.
-   Anything you change on that page is saved as an override in localStorage and
-   takes precedence over the values here.
+   ⚠️ THERE IS NOTHING PERSONAL IN THIS FILE. It lists which standards exist,
+   what each is worth, and whether it is internally or externally assessed. That
+   is identical for every Year 13 student taking these subjects, so it ships as
+   the default and a NEW VISITOR SEES EVERY CREDIT BLANK: internals read "still
+   to do", externals read "sitting it", nothing is graded and nothing is a
+   re-sit. They configure their own record from the Progress page.
 
-   status values:
-     'achieved', credits banked (grade: 'A' | 'M' | 'E')
-     'external', sitting it in the November externals (no credits yet)
-     'notassessed', entered but Standard Not Assessed (no credits, not pursuing)
-     'na', Not Applicable on the record
+   One student's actual results live in data/my-record.js and are applied only
+   when they click "Load my NZQA record". See that file before handing this site
+   to someone else.
 
-   `resit: true`. Already achieved, but being re-sat this year to improve the
-                    grade. Credits are already banked, so a resit can only
-                    raise the grade, never lose the credits.
+   status values used here:
+     'todo'      an internal not started yet          (every internal, by default)
+     'external'  sitting it in the November externals (every external, by default)
+
+   The full vocabulary the app understands, once a student starts editing:
+     'achieved'    credits banked (with grade 'A' | 'M' | 'E')
+     'pending'     handed in, awaiting a result
+     'notassessed' entered but Standard Not Assessed
+     'na'          Not Applicable on the record
+     resit: true   already banked, being re-sat to lift the grade
 
    ⚠️ The `as` (achievement standard) numbers are filled in for the standards
-   this site teaches. A few standards on your record sit outside those subjects
-   (e.g. Maths 3.2 / 3.3 / 3.15, Biology 3.4, the extra English standards). Their AS numbers are left blank rather than guessed. Add them if you want.
+   this site teaches. A few standards sit outside those subjects (e.g. Maths
+   3.2 / 3.3 / 3.15, Biology 3.4, the extra English standards). Their AS numbers
+   are left blank rather than guessed.
    ========================================================================== */
 
 /* ---- Headline qualification status (from the summary panel) ---- */
 export const qualification = {
-  asAt: '2026-08-01',
+  /* Blank by default. A new user has entered nothing, so the headline panel
+     shows zeros until they either type their own figures on the Progress page
+     or load a personal record from data/my-record.js. l3Required is the only
+     genuinely fixed value here: 60 credits at Level 3 is the NCEA rule, not
+     anybody's result. */
+  asAt: null,
   workingTowards: 'Level 3',
-  highestAwarded: 'Level 2 (NZQA 2025)',
-  numeracy: { required: 10, have: 10, met: true, awarded: 'NZQA 2023' },
-  literacy: { required: 10, have: 10, met: true, awarded: 'NZQA 2023' },
+  highestAwarded: null,
+  numeracy: { required: 10, have: 0, met: false, awarded: null },
+  literacy: { required: 10, have: 0, met: false, awarded: null },
   ueLiteracy: {
-    required: 10, met: true, awarded: 'NZQA 2025',
-    read: 13, write: 12, readOrWrite: 8,
+    required: 10, met: false, awarded: null,
+    read: 0, write: 0, readOrWrite: 0,
   },
-  /* Credit summary by level, straight off the record. */
   byLevel: [
-    { level: 3, na: 0, a: 17, m: 4, e: 22, total: 43, attempted: 43 },
-    { level: 2, na: 4, a: 14, m: 45, e: 56, total: 115, attempted: 119 },
-    { level: 1, na: 0, a: 10, m: 12, e: 7, total: 29, attempted: 29 },
+    { level: 3, na: 0, a: 0, m: 0, e: 0, total: 0, attempted: 0 },
+    { level: 2, na: 0, a: 0, m: 0, e: 0, total: 0, attempted: 0 },
+    { level: 1, na: 0, a: 0, m: 0, e: 0, total: 0, attempted: 0 },
   ],
   /* NCEA Level 3 certificate needs 60 credits at L3 + 20 at L2 or above. */
   l3Required: 60,
@@ -46,7 +59,7 @@ export const results = [
   /* ============================== 13CHE ============================== */
   { group: '13CHE', subject: 'Chemistry', code: '3.1', as: '91387', topicId: 'chem-91387',
     title: 'Carry out an investigation in chemistry involving quantitative analysis',
-    credits: 4, status: 'pending', assess: 'Internal' },
+    credits: 4, status: 'todo', assess: 'Internal' },
   { group: '13CHE', subject: 'Chemistry', code: '3.2', as: '91388', topicId: 'chem-91388',
     title: 'Demonstrate understanding of spectroscopic data in chemistry',
     credits: 3, status: 'todo', assess: 'Internal' },
@@ -61,12 +74,12 @@ export const results = [
     credits: 5, status: 'external', assess: 'External' },
   { group: '13CHE', subject: 'Chemistry', code: '3.7', as: '91393', topicId: 'chem-91393',
     title: 'Oxidation-reduction processes',
-    credits: 3, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 3, status: 'todo', assess: 'Internal' },
 
   /* ============================== 13PHY ============================== */
   { group: '13PHY', subject: 'Physics', code: '3.1', as: '91521', topicId: 'phys-91521',
     title: 'Carry out a practical investigation (non-linear relationship)',
-    credits: 4, status: 'pending', assess: 'Internal' },
+    credits: 4, status: 'todo', assess: 'Internal' },
   { group: '13PHY', subject: 'Physics', code: '3.3', as: '91523', topicId: 'phys-91523',
     title: 'Wave systems', credits: 4, status: 'external', assess: 'External' },
   { group: '13PHY', subject: 'Physics', code: '3.4', as: '91524', topicId: 'phys-91524',
@@ -81,27 +94,27 @@ export const results = [
      re-sitting these three externals in Nov 2026 to lift the grade. */
   { group: '13MAC', subject: 'Calculus', code: '3.5', as: '91577', topicId: 'calc-91577',
     title: 'Apply the algebra of complex numbers in solving problems',
-    credits: 5, status: 'achieved', grade: 'A', resit: true, assess: 'External' },
+    credits: 5, status: 'external', assess: 'External' },
   { group: '13MAC', subject: 'Calculus', code: '3.6', as: '91578', topicId: 'calc-91578',
     title: 'Apply differentiation methods in solving problems',
-    credits: 6, status: 'achieved', grade: 'A', resit: true, assess: 'External' },
+    credits: 6, status: 'external', assess: 'External' },
   { group: '13MAC', subject: 'Calculus', code: '3.7', as: '91579', topicId: 'calc-91579',
     title: 'Apply integration methods in solving problems',
-    credits: 6, status: 'achieved', grade: 'A', resit: true, assess: 'External' },
+    credits: 6, status: 'external', assess: 'External' },
   { group: '13MAC', subject: 'Calculus', code: '3.3', as: '', topicId: null,
     title: 'Apply trigonometric methods in solving problems',
-    credits: 4, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 4, status: 'todo', assess: 'Internal' },
   { group: '13MAC', subject: 'Calculus', code: '3.15', as: '', topicId: null,
     title: 'Apply systems of simultaneous equations in solving problems',
-    credits: 3, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 3, status: 'todo', assess: 'Internal' },
   { group: '13MAC', subject: 'Calculus', code: '3.2', as: '', topicId: null,
     title: 'Apply linear programming methods in solving problems',
-    credits: 3, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 3, status: 'todo', assess: 'Internal' },
 
   /* ============================== 13MAS (Statistics) ================== */
   { group: '13MAS', subject: 'Statistics', code: '3.9', as: '91581', topicId: null,
     title: 'Investigate bivariate measurement data',
-    credits: 4, status: 'achieved', grade: 'M', assess: 'Internal' },
+    credits: 4, status: 'todo', assess: 'Internal' },
   { group: '13MAS', subject: 'Statistics', code: '3.10', as: '91582', topicId: 'stat-91582',
     title: 'Use statistical methods to make a formal inference',
     credits: 4, status: 'todo', assess: 'Internal' },
@@ -121,7 +134,7 @@ export const results = [
     credits: 5, status: 'external', assess: 'External' },
   { group: '13BIO', subject: 'Biology', code: '3.4', as: '', topicId: null,
     title: 'How an animal maintains a stable internal environment',
-    credits: 3, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 3, status: 'todo', assess: 'Internal' },
   { group: '13BIO', subject: 'Biology', code: '3.5', as: '91605', topicId: 'bio-91605',
     title: 'Evolutionary processes leading to speciation',
     credits: 4, status: 'external', assess: 'External' },
@@ -138,10 +151,10 @@ export const results = [
      later from the Progress page) without its credits counting anywhere. */
   { group: '13ENU', subject: 'English', code: '3.3', as: '91474', topicId: null,
     title: 'Respond critically to unfamiliar written texts through close reading',
-    credits: 4, status: 'notassessed', assess: 'External' },
+    credits: 4, status: 'external', assess: 'External' },
   { group: '13ENU', subject: 'English', code: '3.4', as: '91475', topicId: null,
     title: 'Produce a selection of fluent and coherent writing',
-    credits: 6, status: 'achieved', grade: 'E', assess: 'Internal' },
+    credits: 6, status: 'todo', assess: 'Internal' },
   { group: '13ENU', subject: 'English', code: '3.7', as: '91478', topicId: 'eng-3-7',
     title: 'Respond critically to significant connections across texts',
     credits: 4, status: 'todo', assess: 'Internal' },

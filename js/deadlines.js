@@ -20,9 +20,12 @@ import { store } from './store.js';
 import { sortByDue, describeDate, daysUntilItem, STATUSES } from '../data/planner.js';
 
 export const KINDS = {
-  internal: { label: 'Internals', icon: '📝', noun: 'internal' },
-  derived:  { label: 'Derived',   icon: '📋', noun: 'derived grade exam' },
-  external: { label: 'Externals', icon: '📄', noun: 'external exam' },
+  /* No icons here on purpose. The dashboard rows already carry a coloured
+     status dot and a due pill; a third marker per row made "What's coming"
+     read as clutter rather than a list. */
+  internal: { label: 'Internals', noun: 'internal' },
+  derived:  { label: 'Derived',   noun: 'derived grade exam' },
+  external: { label: 'Externals', noun: 'external exam' },
 };
 
 /** Whole days from today to an ISO date (negative = past). */
@@ -48,7 +51,13 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
   const out = [];
 
   if (kinds.includes('internal')) {
-    sortByDue(store.internals().filter(i => i.status !== 'graded')).forEach(i => {
+    /* Anything you have finished is not something you have COMING. Both
+       "submitted" and "graded" mean the work has left your hands, so neither
+       belongs in a forward-looking list. They stay visible on the Assessments
+       page and on the calendar (greyed, as a record of when they were due),
+       just not here and not in the nav badge. */
+    const done = (i) => i.status === 'submitted' || i.status === 'graded';
+    sortByDue(store.internals().filter(i => !done(i))).forEach(i => {
       const d = describeDate(i);
       const days = daysUntilItem(i);
       if (days === null) return;                    // undated, can't be ranked (see undatedInternals)
@@ -63,7 +72,7 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
   }
 
   if (kinds.includes('derived')) {
-    derivedExams.forEach(e => out.push({
+    derivedExams().forEach(e => out.push({
       kind: 'derived', subject: e.subject,
       name: ((subjectById[e.subject] || {}).name || e.subject) + ' derived grade',
       code: e.paper, days: daysTo(e.date), dateText: fmt(e.date),
@@ -72,7 +81,7 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
   }
 
   if (kinds.includes('external')) {
-    externalExams.forEach(e => out.push({
+    externalExams().forEach(e => out.push({
       kind: 'external', subject: e.subject,
       name: ((subjectById[e.subject] || {}).name || e.subject) + ' externals',
       code: e.standards, days: daysTo(e.date), dateText: fmt(e.date),

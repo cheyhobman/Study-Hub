@@ -40,7 +40,7 @@ function deadlineRow(x) {
     <span class="cd-dot" style="background:${s.dot || 'var(--accent)'}"></span>
     <span class="due-main">
       <span class="due-title">${x.name}</span>
-      <span class="due-sub">${k.icon} ${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.span ? '' : ''}${x.dateText}</span>
+      <span class="due-sub">${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.span ? '' : ''}${x.dateText}</span>
     </span>
     ${x.statusLabel ? `<span class="int-status" style="background:${x.statusColour}22;color:${x.statusColour};border-color:${x.statusColour}55">${x.statusLabel}</span>` : ''}
     ${duePill(x)}

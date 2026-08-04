@@ -21,10 +21,15 @@
    ========================================================================== */
 
 export const profile = {
-  /* Shown in the dashboard greeting. Use whatever they want to be called. */
-  name: 'Chey',
+  /* Shown in the dashboard greeting. BLANK BY DEFAULT: a new visitor should not
+     be greeted by somebody else's name. The greeting falls back to a neutral
+     "Welcome back" until they set one on the Account page, which saves to this
+     device only. */
+  name: '',
 
-  /* Used only in explanatory copy (e.g. "dates from your school timetable"). */
+  /* Used only in explanatory copy (e.g. "dates from your school timetable").
+     Kept, because the term dates and exam timetables shipped with this copy
+     genuinely are Wellington College's. */
   school: 'Wellington College',
 
   /* The NCEA year this copy is set up for. Shown in the sidebar. */

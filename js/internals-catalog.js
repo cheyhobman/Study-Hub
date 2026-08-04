@@ -9,6 +9,7 @@
 import { results } from '../data/results.js';
 import { SEED_DATES } from '../data/planner.js';
 import { subjects, standardByTopicId } from './registry.js';
+import { store } from './store.js';
 
 const uid = () => 'int_' + Math.random().toString(36).slice(2, 9);
 
@@ -18,23 +19,43 @@ function subjectIdFor(name) {
   return s ? s.id : '';
 }
 
-/** Every internal on the record, newest-first within each subject. */
+/** Every internal THIS student is actually carrying.
+    ---------------------------------------------------------------------------
+    Three things make an internal "theirs", and this used to honour none of them:
+
+      • standards they ADDED from the catalogue are internals too, so extras are
+        merged in rather than only reading the shipped record;
+      • standards they REMOVED on the Progress page are gone, so hidden keys are
+        dropped, which is what stops a deleted standard reappearing in the
+        planner, on the calendar and in "what's coming";
+      • their own EDITS decide the status. Reading r.status straight from the
+        file meant a standard they had marked achieved still showed up as
+        outstanding and got offered by "Load my internals".
+
+    The result is that "load my internals" loads the ones they are really
+    sitting, not every internal the six subjects contain. */
 export function allInternals() {
-  return results
+  const hidden = new Set(store.hiddenStandards());
+  return [...results, ...store.extraStandards()]
     .filter(r => r.assess === 'Internal')
-    .map(r => ({
-      recordKey: `${r.group}:${r.code}`,
-      subjectId: subjectIdFor(r.subject),
-      subjectName: r.subject,
-      code: `${r.subject} ${r.code}`,
-      shortCode: r.code,
-      as: r.as,
-      title: r.title,
-      credits: r.credits,
-      topicId: r.topicId || '',
-      status: r.status,             // 'todo' | 'pending' | 'achieved' | …
-      grade: r.grade || '',
-    }));
+    .filter(r => !hidden.has(`${r.group}:${r.code}`))
+    .map(r => {
+      const key = `${r.group}:${r.code}`;
+      const o = store.creditRecord(key) || {};
+      return {
+        recordKey: key,
+        subjectId: subjectIdFor(r.subject),
+        subjectName: r.subject,
+        code: `${r.subject} ${r.code}`,
+        shortCode: r.code,
+        as: r.as,
+        title: r.title,
+        credits: o.credits != null ? o.credits : r.credits,
+        topicId: r.topicId || '',
+        status: o.status || r.status,   // 'todo' | 'pending' | 'achieved' | …
+        grade: o.grade !== undefined ? o.grade : (r.grade || ''),
+      };
+    });
 }
 
 /** Just the ones still to finish: what the planner is actually for. */

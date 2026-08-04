@@ -14,6 +14,7 @@
 
 import { isTheme, themeById } from './themes.js';
 import { profile as seedProfile } from '../data/profile.js';
+import { results as shippedRecord } from '../data/results.js';
 
 const NS = 'ncea.';
 
@@ -207,6 +208,42 @@ export const store = {
        status: 'notsat' | 'pending' | 'achieved' | 'notachieved'
        grade:  'A' | 'M' | 'E'  (only when achieved)
        credits: optional override of the standard's default credit value */
+  /* ---- One-click personal record ----
+     A new visitor gets the blank course structure from data/results.js. The
+     owner of a copy loads their own results from data/my-record.js with the
+     button on Progress. Everything it writes is an ORDINARY EDIT: the same
+     shape the table itself writes, so it can be changed or reset afterwards
+     exactly like anything the student typed. Nothing here is special-cased. */
+  hasPersonalRecord() { return read('personalrecord', false); },
+  recordOfferDismissed() { return read('recordoffer.skip', false); },
+  dismissRecordOffer() { write('recordoffer.skip', true); emit(); },
+  loadPersonalRecord({ record, qualification, internalStatus }) {
+    const credits = this.creditRecords();
+    Object.entries(record || {}).forEach(([k, v]) => {
+      credits[k] = { status: v.status, grade: v.grade || '', resit: !!v.resit };
+    });
+    write('credits', credits);
+    if (qualification) write('qualification', qualification);
+    /* Planner statuses only. The DUE DATES stay generic (data/planner.js), so
+       a student loading this record still gets their school's dates, not a
+       second person's guesses about them. */
+    if (internalStatus) {
+      const all = this.internals().map(i =>
+        internalStatus[i.recordKey] ? { ...i, status: internalStatus[i.recordKey] } : i);
+      write('internals', all);
+    }
+    write('personalrecord', true);
+    emit();
+  },
+  clearPersonalRecord() {
+    write('credits', {});
+    write('qualification', null);
+    write('personalrecord', false);
+    emit();
+  },
+  /* The headline NZQA panel: blank shipped values, overridden once loaded. */
+  qualificationOverride() { return read('qualification', null); },
+
   creditRecords() { return read('credits', {}); },
   creditRecord(id) { return this.creditRecords()[id] || null; },
   setCreditRecord(id, rec) {
@@ -222,8 +259,15 @@ export const store = {
   internals() { return read('internals', []); },
   saveInternal(item) {
     const all = this.internals();
-    const i = all.findIndex(x => x.id === item.id);
-    if (i >= 0) all[i] = item; else all.push(item);
+    /* Match on id first, then fall back to recordKey. Without the fallback, a
+       standard planned from its topic page and then planned again from the
+       planner arrives with a fresh uid and lands as a SECOND entry for the same
+       standard: two countdowns, two rows, double credits. A blank recordKey is
+       a free-text internal that isn't tied to a standard, so those are left
+       alone and can legitimately repeat. */
+    let i = all.findIndex(x => x.id === item.id);
+    if (i < 0 && item.recordKey) i = all.findIndex(x => x.recordKey === item.recordKey);
+    if (i >= 0) all[i] = { ...item, id: all[i].id }; else all.push(item);
     write('internals', all);
     emit();
     return all;
@@ -304,6 +348,35 @@ export const store = {
   hasOwnProfile() { return !!read('profile', null); },
   resetProfile() { write('profile', null); emit(); },
 
+  /* ---- Is this standard already on the record? ---------------------------
+     A standard can be reachable under two different keys. The catalogue lists
+     the Maths standards under 13MAT while the shipped record files the same
+     papers under 13MAC and 13MAS, so "Apply trigonometric methods" was
+     addable a second time even though it was already there. Four standards
+     collide that way (AS 91574, 91575, 91581, 91587).
+
+     Identity therefore is not group:code alone. Two rows are the same standard
+     if they share an AS number, or (for record rows with no AS number filled
+     in) a normalised title. */
+  _identity(row) {
+    const ids = [`k:${row.group}:${row.code}`];
+    if (row.as) ids.push(`as:${row.as}`);
+    if (row.title) ids.push('t:' + String(row.title).toLowerCase().replace(/[^a-z0-9]+/g, ''));
+    return ids;
+  },
+  /** Every standard currently on the record: shipped rows plus user additions,
+      minus anything hidden. */
+  _presentRows() {
+    const hidden = new Set(this.hiddenStandards());
+    return [...shippedRecord, ...this.extraStandards()]
+      .filter(r => !hidden.has(`${r.group}:${r.code}`));
+  },
+  /** Would adding `row` duplicate something already present? */
+  isStandardPresent(row) {
+    const mine = new Set(this._presentRows().flatMap(r => this._identity(r)));
+    return this._identity(row).some(id => mine.has(id));
+  },
+
   /* ---- Extra standards (subjects this site doesn't teach) ----
      data/results.js is the student's own transcribed record. Anything they add
      from the NZQA catalogue, Economics, Te Reo Māori, Accounting …, or type in
@@ -316,27 +389,30 @@ export const store = {
          topicId: null, custom: true, unverified?: true }                     */
   extraStandards() { return read('extras', []); },
   addExtraStandard(row) {
-    const all = this.extraStandards();
     const key = `${row.group}:${row.code}`;
-    if (all.some(r => `${r.group}:${r.code}` === key)) return { ok: false, reason: 'duplicate' };
-    all.push({ ...row, custom: true });
+    /* Re-adding something previously removed must UN-HIDE it, or the row gets
+       written back to extras and then filtered straight out again, which looked
+       like the Add button silently doing nothing. */
+    const wasHidden = this.isStandardHidden(key);
+    if (wasHidden) this.unhideStandard(key);
+    if (this.isStandardPresent(row)) {
+      if (wasHidden) return { ok: true, restored: true };   // un-hiding WAS the add
+      return { ok: false, reason: 'duplicate' };
+    }
+    const all = this.extraStandards();
+    if (!all.some(r => `${r.group}:${r.code}` === key)) all.push({ ...row, custom: true });
     write('extras', all);
     emit();
     return { ok: true, count: all.length };
   },
   /** Add several at once (a whole subject). Silently skips ones already there. */
   addExtraStandards(rows) {
-    const all = this.extraStandards();
-    const seen = new Set(all.map(r => `${r.group}:${r.code}`));
-    let added = 0;
+    let added = 0, skipped = 0;
     rows.forEach(row => {
-      const key = `${row.group}:${row.code}`;
-      if (seen.has(key)) return;
-      seen.add(key); all.push({ ...row, custom: true }); added++;
+      const res = this.addExtraStandard(row);
+      if (res.ok) added++; else skipped++;
     });
-    write('extras', all);
-    emit();
-    return { added, skipped: rows.length - added };
+    return { added, skipped };
   },
   removeExtraStandard(group, code) {
     write('extras', this.extraStandards().filter(r => !(r.group === group && r.code === code)));
@@ -349,8 +425,26 @@ export const store = {
   },
 
   /* ---- Goal (Progress page) ---- */
-  goal() { return read('goal', { type: 'rank', target: null }); },
+  goal() { return read('goal', { type: 'l3cert', target: null }); },
   setGoal(g) { write('goal', g); emit(); },
+
+  /* THE STARRED GOAL. Null until the student stars one, and that null matters:
+     the Level 3 certificate is what Progress opens on when nothing is starred,
+     but it is NOT itself starred by that fact. It can be starred like any other
+     goal, and starring anything else replaces the star rather than adding one:
+     there is only ever a single favourite. */
+  favGoal() { return read('favgoal', null); },
+  isFavGoal(g) {
+    const f = this.favGoal();
+    return !!f && f.type === g.type && (f.target || null) === (g.target || null);
+  },
+  setFavGoal(g) {
+    const v = { type: g.type, target: g.target || null };
+    write('favgoal', v);
+    write('goal', v);            // starring also shows it
+    emit();
+  },
+  clearFavGoal() { write('favgoal', null); emit(); },
 
   /* ---- Revision session preferences ---- */
   reviseCfg() { return { scope: 'mixed', length: 20, mode: 'mixed', focus: 'all', ...read('revise', {}) }; },

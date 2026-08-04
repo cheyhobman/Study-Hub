@@ -72,7 +72,7 @@ export function renderExams() {
         <h4>Real NCEA externals: November 2026</h4>
         <p>Each subject’s external standards are examined together in one session. Times follow NZQA’s standard 9:30&nbsp;am / 2:00&nbsp;pm sessions.</p>
       </div></div>
-      ${examTable(externalExams, { colTitle: 'Standards', colField: 'standards' })}
+      ${examTable(externalExams(), { colTitle: 'Standards', colField: 'standards' })}
     </div>
 
     <div id="pane-derived" class="hidden">
@@ -80,7 +80,7 @@ export function renderExams() {
         <h4>School derived-grade / trial exams: September 2026</h4>
         <p>Year 12 &amp; 13 have study leave Wed 9 – Fri 18 Sept.</p>
       </div></div>
-      ${examTable(derivedExams, { colTitle: 'Paper', colField: 'paper' })}
+      ${examTable(derivedExams(), { colTitle: 'Paper', colField: 'paper' })}
     </div>
 
     <p class="xs muted mt-5">Dates transcribed from your ${store.profile().year} ${esc(store.profile().school || 'school')} timetables. Edit them in <code>data/exams.js</code>.</p>

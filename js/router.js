@@ -82,11 +82,49 @@ async function resolve(parts) {
   }
 }
 
+/* A grey stand-in for the page being loaded.
+   ---------------------------------------------------------------------------
+   Content modules are imported lazily, so on a slow connection the OLD page sat
+   there until the new one was ready and the app looked frozen. The skeleton
+   claims the space immediately and roughly matches the shape of what is coming,
+   so the real content does not jump when it lands.
+
+   Shapes are per route family, because a subject page and the calendar look
+   nothing alike and a generic block would move everything on arrival. */
+function skeletonFor(parts) {
+  const bar = (w, h = 14, cls = '') =>
+    `<div class="sk ${cls}" style="width:${w};height:${h}px"></div>`;
+  const head = bar('7rem', 11) + bar('60%', 34) + bar('85%', 13) + bar('70%', 13);
+
+  let body;
+  if (parts[0] === 'calendar') {
+    body = `<div class="sk-cal">${Array.from({ length: 35 },
+      () => '<div class="sk sk-cell"></div>').join('')}</div>`;
+  } else if (parts[0] === 'progress') {
+    body = `<div class="sk-row">${Array.from({ length: 4 },
+      () => '<div class="sk sk-tile"></div>').join('')}</div>`
+      + `<div class="sk-row2"><div class="sk sk-card"></div><div class="sk sk-card"></div></div>`;
+  } else {
+    body = Array.from({ length: 3 }, () =>
+      `<div class="sk-block">${bar('40%', 20)}${bar('100%')}${bar('96%')}${bar('72%')}</div>`).join('');
+  }
+  return `<div class="content-inner sk-wrap" aria-busy="true" aria-live="polite">
+    <span class="sr-only">Loading</span>${head}<div class="sk-body">${body}</div></div>`;
+}
+
 export async function renderRoute({ keepScroll = false } = {}) {
   const token = ++currentToken;
   const savedY = keepScroll ? window.scrollY : 0;
   const content = qs('#content');
   const { parts, anchor } = parse();
+
+  /* Delayed on purpose. An already-imported page resolves in a few ms, and
+     flashing skeletons onto it would look worse than showing nothing. Only a
+     route that actually makes you wait gets one. `keepScroll` renders are
+     in-place refreshes of the page you are on, so they never get a skeleton. */
+  const skeletonTimer = keepScroll ? null : setTimeout(() => {
+    if (token === currentToken) content.innerHTML = skeletonFor(parts);
+  }, 140);
 
   let resolved;
   try {
@@ -95,6 +133,7 @@ export async function renderRoute({ keepScroll = false } = {}) {
     console.error('Route error:', e);
     resolved = { view: { html: `<div class="content-inner"><div class="placeholder"><div class="ph-icon">⚠️</div><h3>Something went wrong</h3><p class="mono xs">${e.message}</p></div></div>` }, navKey: null, subjectId: null };
   }
+  if (skeletonTimer) clearTimeout(skeletonTimer);
   if (token !== currentToken) return; // a newer navigation superseded this one
 
   const view = resolved.view;

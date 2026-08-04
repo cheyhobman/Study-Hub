@@ -314,8 +314,9 @@ export function renderInternals(editId = null) {
 
       document.querySelectorAll('.int-del').forEach(b =>
         b.addEventListener('click', () => {
-          const it = store.internals().find(x => x.id === b.dataset.id);
-          if (!confirm(`Delete “${it?.title || 'this internal'}”?`)) return;
+          /* No confirmation step. Removing an internal is one click to undo
+             (re-add it from the catalogue), so a modal for every delete was
+             friction without a payoff. */
           store.deleteInternal(b.dataset.id);
           toast('Internal removed');
           rerender();

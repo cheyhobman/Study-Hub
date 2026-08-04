@@ -15,6 +15,7 @@ import { store } from '../store.js';
 import { pageHead } from './common.js';
 import { toast, esc } from '../ui.js';
 import { results, qualification } from '../../data/results.js';
+import { PERSONAL_RECORD, PERSONAL_QUALIFICATION, PERSONAL_INTERNAL_STATUS } from '../../data/my-record.js';
 import { catalogue, AREAS } from '../../data/nzqa-catalogue.js';
 
 /* Credit colours: chosen so grades and statuses are instantly distinguishable.
@@ -66,6 +67,9 @@ function withOverride(r) {
     status: o.status || r.status,
     grade: o.grade !== undefined ? o.grade : (r.grade || ''),
     credits: o.credits != null ? o.credits : r.credits,
+    /* `resit` moved out of results.js when the shipped record was made blank,
+       so it now arrives as an override like everything else. */
+    resit: o.resit !== undefined ? !!o.resit : !!r.resit,
   };
 }
 
@@ -116,6 +120,19 @@ const legend = (segs) => `<div class="dn-legend">${segs.map(s => `
     <span class="dn-label">${s.label}</span><span class="dn-val">${s.value}</span></div>`).join('')}</div>`;
 
 /* ---- Goals -------------------------------------------------------------- */
+
+/* Runs once per app load. Progress always OPENS on the starred goal, or on the
+   Level 3 certificate when nothing is starred. Changing the dropdown still
+   works normally for the rest of the session: this only decides where you
+   land, not what you are allowed to look at. */
+(() => {
+  const want = store.favGoal() || { type: 'l3cert', target: null };
+  const cur = store.goal();
+  if (cur.type !== want.type || (cur.target || null) !== (want.target || null)) {
+    store.setGoal({ type: want.type, target: want.target || null });
+  }
+})();
+
 const GOALS = {
   l3cert: {
     name: 'NCEA Level 3 certificate',
@@ -171,12 +188,14 @@ const GOALS = {
     desc: 'NZQA calculates this for Australian universities from your <strong>best 90 Level 3 credits</strong> (max 24 per subject), ranking UE-approved subjects first and weighting <strong>externally assessed standards above internals</strong>. You need at least 60 Level 3 credits before NZQA will calculate one at all. NZQA applies annual difficulty scaling and does not predict scores in advance, so the figure below is a rough indicator only.',
     compute: (rows) => {
       const m = atarModel(rows);
-      const a = atarFor(m);
       return {
-        have: a === null ? 0 : a, need: 99.95,
-        blocked: a === null
-          ? `NZQA needs <strong>60+ Level 3 credits</strong> before it will calculate an ATAR. You currently have ${m.creditsCounted}. Passing your November externals clears that threshold.`
-          : null,
+        have: atarFor(m), need: 99.95, blocked: null,
+        /* Under 60 credits the estimate is still shown, because watching it
+           climb is the useful part. It just carries the caveat that NZQA would
+           not actually issue one yet. */
+        note: m.eligible
+          ? `Based on ${m.creditsCounted} of the 90 credits NZQA counts. Credits you have not sat yet count as zero, which is why this rises as results land.`
+          : `⚠️ Estimate only: you have <strong>${m.creditsCounted} Level 3 credits</strong> and NZQA needs <strong>60+</strong> before it will calculate an ATAR at all. Shown so you can see the direction of travel.`,
       };
     },
   },
@@ -327,25 +346,32 @@ const ATAR_MAX_VALUE = 5;
    direction the effect runs, which in the Australian system is well documented:
    scaling reflects the measured strength of the cohort taking each subject.
 
-   Traditionally higher-scaling: the sciences, both maths lines, and the
-   academic humanities and languages. Traditionally lower-scaling: subjects with
-   a large, broad cohort and a heavy practical component.
+   Highest-scaling: both maths lines, the three sciences and English, and only
+   those. The academic humanities and the languages sit a tier below them, above
+   the baseline but not level with maths and science. Traditionally
+   lower-scaling: subjects with a large, broad cohort and a heavy practical
+   component.
 
-   The spread here (1.10 / 1.00 / 0.92) is intentionally narrow. A wider spread
+   The spread here (1.10 / 1.04 / 1.00 / 0.92) is intentionally narrow. A wider spread
    would look more decisive and be less honest. The real factors move every
    year and by cohort. Read the ATAR column as a direction, never a prediction.
 
    Unknown groups, a subject typed in by hand, get the 1.00 baseline. */
-const SCALE_HIGH = 1.10, SCALE_BASE = 1.00, SCALE_LOW = 0.92;
+const SCALE_HIGH = 1.10, SCALE_MID = 1.04, SCALE_BASE = 1.00, SCALE_LOW = 0.92;
 const MAX_SCALE = SCALE_HIGH;
 
 const SUBJECT_SCALE = {};
-/* Chey's six sit here, along with the other academically-scaling subjects. */
+/* TOP TIER: the two maths lines, the three sciences and English. Deliberately
+   nothing else. These are the subjects whose cohorts are strongest across the
+   board, and they are the only ones that should set the ceiling. */
 ['13MAC', '13MAS', '13MAT', '13CHE', '13PHY', '13BIO', '13ENU', '13ENG',
- '13ECO', '13ACC', '13HIS', '13GEO', '13CLA', '13ESS', '13AGH',
- '13MAO', '13FRE', '13GER', '13JPN', '13CHI', '13SPA',
 ].forEach(g => { SUBJECT_SCALE[g] = SCALE_HIGH; });
-/* Baseline: arts and technology. */
+/* SECOND TIER: academic humanities and the languages. They scale above the
+   baseline, but not with the maths and science lines. */
+['13ECO', '13ACC', '13HIS', '13GEO', '13CLA', '13ESS', '13AGH',
+ '13MAO', '13FRE', '13GER', '13JPN', '13CHI', '13SPA',
+].forEach(g => { SUBJECT_SCALE[g] = SCALE_MID; });
+/* BASELINE: arts, technology and business. */
 ['13ARH', '13MUS', '13DRA', '13ART', '13DVC', '13DIT', '13MED', '13BUS',
 ].forEach(g => { SUBJECT_SCALE[g] = SCALE_BASE; });
 /* Traditionally lower-scaling. */
@@ -402,18 +428,26 @@ function topCredits(pool) {
 export function atarModel(rows, assumeGrade = null) {
   const { points, used } = topCredits(atarPool(rows, assumeGrade));
 
-  /* Quality = the AVERAGE VALUE PER CREDIT across the best 90, expressed as a
-     fraction of the maximum (Excellence on an external).
+  /* Quality = your points as a fraction of what a FULL 90-credit programme of
+     Excellence in a top-scaling subject would score.
      ------------------------------------------------------------------------
-     This replaces an earlier "normalise against your own all-Excellence
-     ceiling" approach, which compressed the scale badly: a programme finishing
-     entirely at Achieved scored ~88% and mapped to an ATAR near 97, when
-     published endorsement bands put Achieved-level results around 50–69.
-     Averaging per credit is both what the published method describes and
-     inherently better behaved, because a weaker grade can no longer be hidden
-     by the ceiling moving down with it. */
-  const quality = used ? Math.min(1, (points / used) / (ATAR_MAX_VALUE * MAX_SCALE)) : 0;
+     ⚠️ THE DENOMINATOR IS ALWAYS 90, NEVER `used`. That is the whole point of a
+     "best 90 credits" rank. Dividing by `used` measured your average grade and
+     ignored how much you had actually done, so a student holding 60 credits of
+     straight Excellence scored exactly the same 1.00 as a student holding 90 of
+     them, and both came out at 99.95. They are not the same candidate: ATAR is
+     a RANK against everyone else, and 30 credits you never sat cannot be
+     silently excused. Missing credits now count as zero, which is what being
+     ranked against a full cohort actually means.
 
+     This also replaced an even earlier "normalise against your own
+     all-Excellence ceiling" approach, which compressed the scale so badly that
+     an all-Achieved programme mapped to ~97. */
+  const quality = Math.min(1, points / (ATAR_CREDITS * ATAR_MAX_VALUE * MAX_SCALE));
+
+  /* `eligible` is now purely informational: NZQA will not issue an ATAR under
+     60 Level 3 credits, and we still say so, but the estimate keeps being
+     calculated below that line so you can watch it climb as credits land. */
   return { creditsCounted: used, points: Math.round(points), quality, eligible: used >= 60 };
 }
 
@@ -454,7 +488,10 @@ const ATAR_CURVE = [
 ];
 
 export function atarFor(model) {
-  if (!model.eligible) return null;              // under 60 L3 credits = no ATAR
+  /* No eligibility gate. Below 60 credits NZQA would not issue an ATAR at all,
+     but returning null there left the column blank for months and gave no sense
+     of direction. The number keeps being computed; the UI is responsible for
+     labelling it as "not yet eligible" rather than hiding it. */
   const q = model.quality;
   if (q >= 1) return 99.95;                      // the top of the scale
   for (let i = 0; i < ATAR_CURVE.length - 1; i++) {
@@ -552,12 +589,11 @@ export function renderProgress() {
           ${r.resit ? '<br><span class="badge badge-flag">re-sitting Nov 2026 to lift the grade</span>' : ''}
           ${r.topicId ? `<br><a class="xs" href="#/topic/${r.topicId}" data-link>study this →</a>` : ''}
 </td>
-        <td><input class="cr-credits sa-input" type="number" min="0" max="30" value="${r.credits}" aria-label="Credits" style="width:62px;padding:5px 8px"></td>
-        <td><select class="cr-status sa-input" aria-label="Status" style="padding:5px 8px"
-                    title="${STATUS_HINT[r.status] || ''}">
+        <td><input class="cr-credits sa-input" type="number" min="0" max="30" value="${r.credits}" aria-label="Credits"></td>
+        <td><select class="cr-status sa-input" aria-label="Status" title="${STATUS_HINT[r.status] || ''}">
           ${Object.entries(STATUS_LABEL).map(([k, v]) => `<option value="${k}" title="${STATUS_HINT[k] || ''}"${r.status === k ? ' selected' : ''}>${v}</option>`).join('')}
         </select></td>
-        <td class="cr-last"><select class="cr-grade sa-input" aria-label="Grade" style="padding:5px 8px"${r.status !== 'achieved' ? ' disabled' : ''}>
+        <td class="cr-last"><select class="cr-grade sa-input" aria-label="Grade"${r.status !== 'achieved' ? ' disabled' : ''}>
           <option value="">N/A</option>
           ${['A', 'M', 'E'].map(x => `<option value="${x}"${r.grade === x ? ' selected' : ''}>${GRADE_NAME[x]}</option>`).join('')}
         </select>
@@ -569,7 +605,10 @@ export function renderProgress() {
       </tr>`).join('');
   }).join('');
 
-  const q = qualification;
+  /* Shipped blank; a loaded personal record layers over the top. MERGED, not
+     replaced: fixed rules like l3Required (60 credits, an NCEA rule, nobody's
+     result) live only in the shipped object and must survive the overlay. */
+  const q = { ...qualification, ...(store.qualificationOverride() || {}) };
 
   /* Empty state: only if literally nothing is banked, pending or upcoming
      (e.g. after a full reset with an emptied record). */
@@ -601,8 +640,30 @@ export function renderProgress() {
     ${pageHead({
       eyebrow: 'Credit tracker',
       title: 'Progress',
-      lede: 'Seeded from your actual NZQA Record of Learning. Edit anything below and it saves on this device.',
+      lede: store.hasPersonalRecord()
+        ? 'Seeded from your NZQA Record of Learning. Edit anything below and it saves on this device.'
+        : 'Every credit starts blank. Set each standard\u2019s status and grade below and it saves on this device.',
     })}
+
+    ${(() => {
+      /* This copy ships with somebody's saved record in data/my-record.js.
+         Offer it rather than applying it: a new visitor should never open the
+         site already holding another student's grades. Emptying that file
+         removes this offer entirely, which is the step to take before handing
+         the site on. */
+      const owned = Object.keys(PERSONAL_RECORD).length > 0;
+      if (!owned || store.hasPersonalRecord() || store.recordOfferDismissed()) return '';
+      return `<div class="callout callout-note mb-5" id="pg-offer"><div class="co-icon">i</div><div class="co-body">
+        <h4>This copy has a saved record</h4>
+        <p class="small">A previous NZQA Record of Learning is saved in this copy of the site
+          (${Object.keys(PERSONAL_RECORD).length} standards, ${esc(store.profile().school || 'this school')}).
+          Load it if this is your copy, or leave it blank and enter your own.</p>
+        <div class="flex gap-3 mt-3 wrap">
+          <button class="btn btn-primary btn-sm" id="pg-load-record">Load that record</button>
+          <button class="btn btn-ghost btn-sm" id="pg-skip-record">Start blank</button>
+        </div>
+      </div></div>`;
+    })()}
 
     <!-- Qualification status strip -->
     <div class="stat-row mb-5">
@@ -662,6 +723,19 @@ export function renderProgress() {
           </select>
           <input id="goal-target" class="sa-input" type="number" min="1" placeholder="target credits"
                  value="${goal.target || ''}" ${goal.type === 'custom' ? '' : 'style="display:none"'}>
+          ${(() => {
+            const isFav = store.isFavGoal(goal);
+            return `<button type="button" id="goal-fav" class="goal-star${isFav ? ' is-fav' : ''}"
+                      aria-pressed="${isFav}"
+                      aria-label="${isFav ? 'Starred goal. Click to unstar.' : 'Star this goal so Progress opens on it'}"
+                      title="${isFav ? 'Starred: Progress opens on this goal' : 'Star this goal so Progress opens on it'}">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 2.9l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.34l-5.66 2.97 1.08-6.3L2.85 9.55l6.32-.92z"/>
+              </svg>
+              <i class="gs-spark" aria-hidden="true"></i><i class="gs-spark" aria-hidden="true"></i>
+              <i class="gs-spark" aria-hidden="true"></i><i class="gs-spark" aria-hidden="true"></i>
+            </button>`;
+          })()}
         </div>
         <p class="xs muted mt-3">${gdef.desc}</p>
         <div class="goal-figure">
@@ -673,6 +747,7 @@ export function renderProgress() {
             <div class="xs muted">${goal.type === 'atar' ? 'indicative ATAR' : 'credits'} toward ${gdef.name}</div>
             <div class="progress mt-3"><span style="width:${pct}%"></span></div>
             <div class="xs muted mt-3">${pct}% there${have >= need ? ', already met' : ` · ${(need - have).toFixed(goal.type === 'atar' ? 2 : 0)} to go`}</div>
+            ${goalResult.note ? `<div class="xs muted mt-3">${goalResult.note}</div>` : ''}
             ${goalResult.breakdown ? `
               <div class="ue-breakdown mt-4">
                 <div class="ue-rows">
@@ -735,14 +810,14 @@ export function renderProgress() {
                 return `<tr${hl ? ' style="background:var(--accent-soft)"' : ''}>
                   <td><strong>${label}</strong></td>
                   <td class="center mono"><strong>${x.rank.score}</strong><span class="xs muted"> /320</span></td>
-                  <td class="center mono">${a === null ? '<span class="xs muted">n/a</span>' : '~' + a.toFixed(2)}</td>
+                  <td class="center mono">~${a.toFixed(2)}</td>
                   <td class="xs muted">${note}</td></tr>`;
               };
               return [
                 row('Right now (banked credits only)', now,
                   now.atar.eligible
-                    ? `${now.atar.creditsCounted} of the 90 ATAR credits filled.`
-                    : `⚠️ Only ${now.atar.creditsCounted} L3 credits. NZQA needs <strong>60+</strong> before it will calculate an ATAR at all. Your November externals get you past that.`),
+                    ? `${now.atar.creditsCounted} of the 90 ATAR credits filled. The other ${90 - now.atar.creditsCounted} count as zero until you sit them.`
+                    : `⚠️ Only ${now.atar.creditsCounted} of 90 credits filled, and NZQA needs <strong>60+</strong> before it issues an ATAR at all. The empty ${90 - now.atar.creditsCounted} count as zero, which is why this is low.`),
                 row('If you pass everything at Achieved', ifA, 'All credits count, but at the lowest weighting.'),
                 row('If you get Merit in everything remaining', ifM, `+${ifM.rank.score - ifA.rank.score} rank points over all-Achieved.`),
                 row('If you get Excellence in everything remaining', ifE, `+${ifE.rank.score - ifA.rank.score} rank points over all-Achieved: your ceiling.`, true),
@@ -766,9 +841,10 @@ export function renderProgress() {
           <em>same grade</em> when choosing which credits count, plus a coarse
           <strong>subject-scaling</strong> step.</p>
         <p>NZQA does scale for relative subject difficulty and <strong>does not publish the
-          factors</strong>, so the three tiers used here are illustrative, not NZQA's:
-          the sciences, both maths lines and the academic humanities and languages sit highest;
-          arts and technology sit at the baseline; PE and Health sit lowest. The spread is
+          factors</strong>, so the four tiers used here are illustrative, not NZQA's:
+          both maths lines, the three sciences and English sit highest; the academic
+          humanities and the languages sit one tier below them; arts, technology and business
+          sit at the baseline; PE and Health sit lowest. The spread is
           deliberately narrow. A wider one would look more decisive and be less honest.</p>
         <p>Your programme (Chemistry, Physics, Calculus, Statistics, Biology, English) is entirely
           in the top tier, so an all-Excellence result reaches the top of the scale here. NZQA
@@ -899,6 +975,21 @@ export function renderProgress() {
           tr.querySelector(sel).addEventListener('change', () => { save(); rerender(); }));
       });
 
+      document.getElementById('pg-load-record')?.addEventListener('click', () => {
+        store.loadPersonalRecord({
+          record: PERSONAL_RECORD,
+          qualification: PERSONAL_QUALIFICATION,
+          internalStatus: PERSONAL_INTERNAL_STATUS,
+        });
+        toast('Record loaded. Every value is editable.');
+        rerender();
+      });
+      document.getElementById('pg-skip-record')?.addEventListener('click', () => {
+        store.dismissRecordOffer();
+        toast('Starting blank. You can load it later from Account.');
+        rerender();
+      });
+
       const gt = document.getElementById('goal-type');
       const tgt = document.getElementById('goal-target');
       gt.addEventListener('change', () => {
@@ -908,6 +999,31 @@ export function renderProgress() {
       tgt.addEventListener('change', () => {
         store.setGoal({ type: 'custom', target: parseInt(tgt.value, 10) || 60 });
         rerender();
+      });
+
+      /* The star favourites whatever the dropdown is currently showing. Only
+         one goal is ever starred, so starring a second one silently replaces
+         the first. Clicking the star of the goal that is already starred
+         removes it, which drops Progress back to the Level 3 default. */
+      const favBtn = document.getElementById('goal-fav');
+      favBtn?.addEventListener('click', () => {
+        const mine = {
+          type: gt.value,
+          target: gt.value === 'custom' ? (parseInt(tgt.value, 10) || 60) : null,
+        };
+        if (store.isFavGoal(mine)) {
+          store.clearFavGoal();
+          toast('Star removed. Progress opens on the Level 3 certificate goal.');
+          rerender();
+          return;
+        }
+        store.setFavGoal(mine);
+        /* Paint the fill and the sparkle straight away, then rebuild once the
+           animation has finished so it never gets cut off mid-burst. */
+        favBtn.classList.add('is-fav', 'is-bursting');
+        favBtn.setAttribute('aria-pressed', 'true');
+        toast(`Starred ${(GOALS[mine.type] || GOALS.l3cert).name}`);
+        setTimeout(rerender, 640);
       });
 
       /* The inline "reset edits" link in the donut caption does the same thing
@@ -938,12 +1054,42 @@ export function renderProgress() {
 
       /* Which subjects has the student already taken rows from? Used to show
          "3 of 5 added" rather than making them remember. */
-      const addedKeys = new Set(store.extraStandards().map(r => `${r.group}:${r.code}`));
+      /* ITEM 6: "already added" has to mean "already ON THE RECORD", not just
+         "in my extras". The shipped record files the Maths papers under 13MAC /
+         13MAS while the catalogue lists them under 13MAT, so four standards
+         (AS 91574, 91575, 91581, 91587) could be added a second time. The store
+         owns the identity rule; the UI just asks it. */
+      /* ITEM 7 + 8: anything the student has REMOVED becomes re-addable.
+         ------------------------------------------------------------------
+         Removing is a hide, not a delete, so the row still exists. This turns
+         the hidden set back into catalogue-shaped subjects and appends them to
+         the bottom of the add list, which is the only route back for the six
+         taught subjects (they are in results.js, never in the catalogue, so
+         they appeared nowhere once removed). Library subjects come back the
+         same way, which also fixes them silently failing to re-add. */
+      const removedSubjects = (() => {
+        const hidden = store.hiddenStandards();
+        if (!hidden.length) return [];
+        const byGroup = {};
+        [...results, ...store.extraStandards()].forEach(r => {
+          const key = `${r.group}:${r.code}`;
+          if (!hidden.includes(key)) return;
+          (byGroup[r.group] = byGroup[r.group] || {
+            id: 'removed:' + r.group, name: r.subject || r.group, group: r.group,
+            icon: '\u21BA', area: 'Removed', removed: true, standards: [],
+          }).standards.push({ code: r.code, as: r.as || '', title: r.title,
+                              credits: r.credits, assess: r.assess });
+        });
+        return Object.values(byGroup);
+      })();
+
+      const isPresent = (sub, st) => store.isStandardPresent({
+        group: sub.group, code: st.code, as: st.as || '', title: st.title });
 
       const paintLib = () => {
         const q = (search.value || '').trim().toLowerCase();
         const a = area.value;
-        const subjects = catalogue
+        let subjects = catalogue
           .filter(sub => !a || sub.area === a)
           .map(sub => {
             const hit = !q || sub.name.toLowerCase().includes(q)
@@ -955,33 +1101,43 @@ export function renderProgress() {
           })
           .filter(Boolean);
 
+        /* Removed subjects always sit at the bottom, and ignore the area
+           filter: you are looking for something you took away, not browsing. */
+        const removedMatching = removedSubjects.filter(sub => !q
+          || sub.name.toLowerCase().includes(q) || sub.group.toLowerCase().includes(q)
+          || sub.standards.some(st => (st.as || '').includes(q)
+              || st.code.toLowerCase().includes(q) || st.title.toLowerCase().includes(q)));
+        subjects = subjects.concat(removedMatching);
+
         if (!subjects.length) {
           list.innerHTML = `<p class="muted small">No subject matches “${esc(q)}”. Use <em>Add a standard by hand</em> below.</p>`;
           return;
         }
 
         list.innerHTML = subjects.map(sub => {
-          const have = sub.standards.filter(st => addedKeys.has(`${sub.group}:${st.code}`)).length;
+          const have = sub.standards.filter(st => isPresent(sub, st)).length;
           const total = sub.standards.length;
           const cr = sub.standards.reduce((n, st) => n + st.credits, 0);
           return `
-          <details class="lib-sub"${q ? ' open' : ''}>
+          <details class="lib-sub${sub.removed ? ' is-removed' : ''}"${q || sub.removed ? ' open' : ''}>
             <summary>
               <span class="ls-icon" aria-hidden="true">${sub.icon}</span>
               <span class="ls-name"><strong>${esc(sub.name)}</strong><em>${sub.group} · ${total} standards · ${cr} credits</em></span>
+              ${sub.removed ? '<span class="badge badge-warn">You removed this</span>' : ''}
               ${have ? `<span class="badge badge-good">${have}/${total} added</span>` : ''}
-              <button class="btn btn-ghost btn-sm" data-add-subject="${sub.id}"
-                      ${have === total ? 'disabled' : ''}>${have === total ? 'All added' : 'Add all'}</button>
+              <button class="btn ${sub.removed ? 'btn-primary' : 'btn-ghost'} btn-sm" data-add-subject="${sub.id}"
+                      ${have === total ? 'disabled' : ''}>${
+                        have === total ? 'All added' : (sub.removed ? 'Restore all' : 'Add all')}</button>
             </summary>
             <table class="data lib-table">
               <tbody>${sub.standards.map(st => {
-                const on = addedKeys.has(`${sub.group}:${st.code}`);
+                const on = isPresent(sub, st);
                 return `<tr>
                   <td class="mono xs">${st.code}${st.as ? ` · AS${st.as}` : ''}</td>
                   <td>${esc(st.title)}</td>
                   <td class="mono xs" style="white-space:nowrap">${st.credits} cr · ${st.assess}</td>
                   <td style="text-align:right"><button class="btn ${on ? 'btn-ghost' : 'btn-primary'} btn-sm"
-                      data-add-std="${sub.id}|${st.code}" ${on ? 'disabled' : ''}>${on ? 'Added' : 'Add'}</button></td>
+                      data-add-std="${sub.id}|${st.code}" ${on ? 'disabled' : ''}>${on ? 'Added' : (sub.removed ? 'Restore' : 'Add')}</button></td>
                 </tr>`;
               }).join('')}</tbody>
             </table>
@@ -1002,31 +1158,49 @@ export function renderProgress() {
       list?.addEventListener('click', (e) => {
         const one = e.target.closest('[data-add-std]');
         const all = e.target.closest('[data-add-subject]');
+        /* A "removed:" id is one of the synthetic groups built from the hidden
+           set. Those rows already exist, so restoring means un-hiding rather
+           than writing a new one. */
+        const findSub = (id) => id.startsWith('removed:')
+          ? removedSubjects.find(x => x.id === id)
+          : catalogue.find(x => x.id === id);
+
         if (one) {
           const [subId, code] = one.dataset.addStd.split('|');
-          const sub = catalogue.find(x => x.id === subId);
+          const sub = findSub(subId);
           const st = sub?.standards.find(x => x.code === code);
           if (!st) return;
-          const res = store.addExtraStandard(rowFor(sub, st));
-          toast(res.ok ? `Added ${sub.name} ${st.code}` : 'That standard is already on your record');
+          if (sub.removed) {
+            store.unhideStandard(`${sub.group}:${st.code}`);
+            toast(`Restored ${sub.name} ${st.code}`);
+          } else {
+            const res = store.addExtraStandard(rowFor(sub, st));
+            toast(res.ok ? `Added ${sub.name} ${st.code}` : 'That standard is already on your record');
+          }
           rerender();
         } else if (all) {
-          const sub = catalogue.find(x => x.id === all.dataset.addSubject);
+          const sub = findSub(all.dataset.addSubject);
           if (!sub) return;
-          const res = store.addExtraStandards(sub.standards.map(st => rowFor(sub, st)));
-          toast(`Added ${res.added} ${sub.name} standard${res.added === 1 ? '' : 's'}`
-                + (res.skipped ? ` (${res.skipped} already there)` : ''));
+          if (sub.removed) {
+            sub.standards.forEach(st => store.unhideStandard(`${sub.group}:${st.code}`));
+            toast(`Restored ${sub.name}`);
+          } else {
+            const res = store.addExtraStandards(sub.standards.map(st => rowFor(sub, st)));
+            toast(`Added ${res.added} ${sub.name} standard${res.added === 1 ? '' : 's'}`
+                  + (res.skipped ? ` (${res.skipped} already there)` : ''));
+          }
           rerender();
         }
       });
 
       paintLib();
 
-      /* Remove a whole subject. Works for the six taught subjects exactly as it
-         does for anything added from the library. Hiding is reversible. */
       /* Remove ONE standard. Works the same whether it came from the shipped
-         record or from the library: a hidden key drops it out of every total,
-         and it can be put back from the "removed standards" list below. */
+         record or from the library: a hidden key drops it out of every total.
+         Hiding is reversible, and that is the whole mechanism behind removing a
+         subject too. Hide every standard in a group and the subject drops out
+         of the sidebar and the totals, then reappears at the bottom of the add
+         list ready to be restored. Nothing is ever actually deleted. */
       document.getElementById('credit-table')?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-remove-std]');
         if (!btn) return;
@@ -1039,16 +1213,6 @@ export function renderProgress() {
       });
 
 
-      /* Per-row remove control on the standards the student added. */
-      document.getElementById('credit-table')?.addEventListener('click', (e) => {
-        const rem = e.target.closest('[data-remove-std]');
-        if (!rem) return;
-        const [g, c] = rem.dataset.removeStd.split('|');
-        store.removeExtraStandard(g, c);
-        store.setCreditRecord(`${g}:${c}`, null);   // drop any edit too
-        toast('Standard removed');
-        rerender();
-      });
 
       /* ---- add by hand ---- */
       document.getElementById('lib-manual')?.addEventListener('submit', (e) => {
