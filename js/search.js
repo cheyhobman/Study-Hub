@@ -5,6 +5,7 @@
    ========================================================================== */
 
 import { search } from './registry.js';
+import { go } from './router.js';
 import { qs, qsa, esc } from './ui.js';
 
 export function initSearch() {
@@ -80,8 +81,8 @@ export function initSearch() {
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
     else if (e.key === 'Enter') {
       const items = qsa('.search-hit', panel);
-      if (sel >= 0 && items[sel]) { location.hash = hits[sel].url.slice(1); input.blur(); close(); }
-      else if (items[0]) { location.hash = hits[0].url.slice(1); input.blur(); close(); }
+      const hit = (sel >= 0 && items[sel]) ? hits[sel] : (items[0] ? hits[0] : null);
+      if (hit) { go(hit.url); input.blur(); close(); }
     } else if (e.key === 'Escape') { input.blur(); close(); }
   });
 

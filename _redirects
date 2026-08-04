@@ -1,0 +1,5 @@
+# Netlify SPA fallback. Every route that is not a real file serves index.html,
+# so /progress works on a cold load instead of 404ing. Vercel uses the
+# "rewrites" block in vercel.json for the same job; both ship so the site can
+# move hosts without breaking.
+/*  /index.html  200

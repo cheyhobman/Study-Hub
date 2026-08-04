@@ -15,7 +15,7 @@ import { SN2_SVG, ADDITION_SVG, ELIM_SVG, ARROW_LEGEND } from './mechanisms-svg.
 export default {
   title: 'Organic compounds',
   tags: ['Functional groups', 'IUPAC naming', 'Isomerism', 'Mechanisms', 'Pathways'],
-  intro: 'The big external. You need to name compounds, recognise functional groups, predict products and reagents for reactions, interconvert functional groups (pathways), understand isomerism, and draw reaction mechanisms with curly arrows. This page builds all of that up. Take it section by section. It pairs directly with <a href="#/topic/chem-91388" data-link>Spectroscopic data →</a>, where you identify these compounds from their spectra.',
+  intro: 'The big external. You need to name compounds, recognise functional groups, predict products and reagents for reactions, interconvert functional groups (pathways), understand isomerism, and draw reaction mechanisms with curly arrows. This page builds all of that up. Take it section by section. It pairs directly with <a href="/topic/chem-91388" data-link>Spectroscopic data →</a>, where you identify these compounds from their spectra.',
 
   /* ---- flashcards: reagents/conditions, naming, mechanisms, isomerism ---- */
   flashcards: [

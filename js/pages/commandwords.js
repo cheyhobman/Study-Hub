@@ -7,6 +7,7 @@
    contrast so the difference between (say) describe and explain is concrete.
    ========================================================================== */
 import { store } from '../store.js';
+import { toast } from '../ui.js';
 import { pageHead, sectionTabs} from './common.js';
 
 const WORDS = [
@@ -144,69 +145,79 @@ export function renderCommandWords() {
       <h4>Before you write anything in the exam</h4>
       <p>Circle the command word in the question. Then ask: “Am I being asked for a fact, a reason, or a judgement?” Match your answer’s shape to that. It is the cheapest mark-grab available to you.</p>
     </div></div>
-  
+
     <div class="card mt-5" id="backup-panel">
-      <h3 class="mb-2">Backup &amp; restore</h3>
-      <p class="small muted mb-3">Everything on this site, your streak, flashcard boxes, quiz history,
-        internal deadlines, credit records and flags, is stored in this browser only.
-        Clear your browsing data or switch device and it is gone. Download a backup regularly.</p>
+      <h3 class="mb-2">Back up your data</h3>
+      <p class="small muted mb-3">Everything you have entered, your name, results and grades, subjects,
+        assessments and dates, flashcard boxes, quiz history, streak and flags, is stored in
+        <strong>this browser only</strong>. Clearing your browsing data, switching device or a bad
+        update loses it. The site is in beta, so keep a recent backup.</p>
       <div class="flex gap-3 wrap">
-        <button class="btn btn-primary btn-sm" id="bk-export">⬇ Download my data</button>
+        <button class="btn btn-primary btn-sm" id="bk-export">Download my data</button>
         <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">
-          ⬆ Restore from file
+          Restore from file
           <input type="file" id="bk-import" accept="application/json,.json" hidden>
         </label>
       </div>
-      <p class="xs muted mt-3" id="bk-status"></p>
+      <p class="xs muted mt-3" id="bk-status">${(() => {
+        const t = store.lastBackupAt();
+        if (!t) return 'No backup taken on this device yet.';
+        const d = Math.floor((Date.now() - t) / 86400000);
+        return `Last backup ${d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'}.`;
+      })()}</p>
+      <p class="xs muted mt-2">Restoring <strong>replaces</strong> everything currently saved in this
+        browser with the contents of the file.</p>
     </div>
 </div>`;
 
   return {
     html,
-    onMount() {
-      /* ---- Backup & restore ----
-         Everything is localStorage, so this is the only route out of the
-         browser. Export dumps every `ncea.` key verbatim; import replaces
-         them wholesale after an explicit confirm. */
-      const status = (msg) => {
-        const st = document.getElementById('bk-status');
-        if (st) st.textContent = msg;
-      };
-
-      document.getElementById('bk-export')?.addEventListener('click', () => {
-        const payload = store.exportAll();
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `ncea-study-hub-${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-        status(`Exported ${Object.keys(payload.data).length} saved items.`);
-      });
-
-      document.getElementById('bk-import')?.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          let payload;
-          try { payload = JSON.parse(reader.result); }
-          catch (err) { status('That file is not valid JSON.'); return; }
-          if (!confirm('Restore this backup?\n\nThis REPLACES all study data currently stored in this browser.')) {
-            e.target.value = '';
-            return;
-          }
-          const res = store.importAll(payload);
-          status(res.ok ? `Restored ${res.keys} items: reloading…` : `Could not restore: ${res.error}`);
-          /* A full reload IS right here: importAll() has just replaced the whole
-             of localStorage, so every module's in-memory mirror is stale. This is
-             the one place on the site where reloading is the correct move. */
-          if (res.ok) setTimeout(() => location.reload(), 900);
-        };
-        reader.readAsText(file);
-      });
-    },
+    onMount() { wireBackupPanel(); },
   };
+}
+
+/* Exported so the dashboard's beta popup can reuse this exact implementation
+   rather than carrying a second copy of the download/restore logic. */
+export function wireBackupPanel() {
+  const status = (msg) => {
+    const st = document.getElementById('bk-status');
+    if (st) st.textContent = msg;
+  };
+
+  document.getElementById('bk-export')?.addEventListener('click', () => {
+    const payload = store.exportAll();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const who = (payload.profile.name || 'study-hub').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    a.download = `${who}-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+    store.markBackedUp();
+    status(`Downloaded ${payload.counts.keys} saved items.`);
+    toast('Backup downloaded');
+  });
+
+  document.getElementById('bk-import')?.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let payload;
+      try { payload = JSON.parse(reader.result); }
+      catch (err) { status('That file is not valid JSON.'); return; }
+      if (!confirm('Restore this backup?\n\nThis REPLACES everything currently saved in this browser.')) {
+        e.target.value = '';
+        return;
+      }
+      const res = store.importAll(payload);
+      status(res.ok ? `Restored ${res.keys} items: reloading…` : `Could not restore: ${res.error}`);
+      /* A full reload IS right here: importAll() has just replaced the whole of
+         localStorage, so every module's in-memory mirror is stale. */
+      if (res.ok) setTimeout(() => location.reload(), 900);
+    };
+    reader.readAsText(file);
+  });
 }

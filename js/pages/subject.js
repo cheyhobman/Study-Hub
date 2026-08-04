@@ -9,7 +9,7 @@ import { renderBlock } from '../ui.js';
 
 export function renderSubject(subjectId) {
   const s = subjectById[subjectId];
-  if (!s) return `<div class="content-inner"><div class="placeholder"><div class="ph-icon">🤔</div><h3>Subject not found</h3><p>Head back to the <a href="#/" data-link>dashboard</a>.</p></div></div>`;
+  if (!s) return `<div class="content-inner"><div class="placeholder"><div class="ph-icon">🤔</div><h3>Subject not found</h3><p>Head back to the <a href="/" data-link>dashboard</a>.</p></div></div>`;
 
   const externals = s.standards.filter(x => x.type === 'External');
   const internals = s.standards.filter(x => x.type !== 'External');
@@ -20,7 +20,7 @@ export function renderSubject(subjectId) {
   const row = (std) => {
     const done = store.isReviewed(std.topicId);
     const flag = store.isFlagged(std.topicId);
-    return `<a class="std-row" href="#/topic/${std.topicId}" data-link>
+    return `<a class="std-row" href="/topic/${std.topicId}" data-link>
       <span class="std-code"${std.accent ? ` style="color:${std.accent};background:color-mix(in srgb, ${std.accent} 14%, transparent)"` : ''}>${std.code}</span>
       <span class="std-main">
         <span class="std-title">${std.title}${std.priority ? ' <span class="badge" style="background:var(--warn-bg);color:var(--warn)">priority</span>' : ''}</span>
@@ -36,7 +36,7 @@ export function renderSubject(subjectId) {
 
   return `
   <div class="content-inner">
-    ${crumbs([{ label: 'Home', href: '#/' }, { label: s.name }])}
+    ${crumbs([{ label: 'Home', href: '/' }, { label: s.name }])}
     ${pageHead({
       eyebrow: `${s.icon} ${s.level}`,
       title: s.name,
@@ -60,8 +60,8 @@ export function renderSubject(subjectId) {
     <div class="flex items-center wrap gap-3 mb-3" style="justify-content:space-between">
       <h2>Achievement standards</h2>
       <span class="flex gap-3 wrap">
-        <a class="btn btn-ghost btn-sm" href="#/reference/${s.id}" data-link>📄 Reference sheet</a>
-        <a class="btn btn-ghost btn-sm" href="#/printcards/${s.id}" data-link>Print flashcards</a>
+        <a class="btn btn-ghost btn-sm" href="/reference/${s.id}" data-link>📄 Reference sheet</a>
+        <a class="btn btn-ghost btn-sm" href="/printcards/${s.id}" data-link>Print flashcards</a>
       </span>
     </div>
 
@@ -76,7 +76,7 @@ export function renderSubject(subjectId) {
       <div class="std-list">${s.guides.map(g => {
         const done = store.isReviewed(g.topicId);
         const flag = store.isFlagged(g.topicId);
-        return `<a class="std-row" href="#/topic/${g.topicId}" data-link>
+        return `<a class="std-row" href="/topic/${g.topicId}" data-link>
           <span class="std-code">${g.icon || '★'}</span>
           <span class="std-main">
             <span class="std-title">${g.title}</span>

@@ -17,12 +17,86 @@ import { visibleSubjects, subjectById, visibleStandards } from '../registry.js';
 import { store } from '../store.js';
 import { esc } from '../ui.js';
 import { upcomingDeadlines, undatedInternals, deadlineCounts, duePill, KINDS } from '../deadlines.js';
+import { wireBackupPanel } from './commandwords.js';
+import { go } from '../router.js';
 /* Reads the STORE, not data/profile.js, so a visitor who sets their own name
    sees it here. store.profile() falls back to the seed file. */
 
+/* ---- welcome messages -----------------------------------------------------
+   Three messages per window, each written twice: once for someone who has not
+   told us their name, once for someone who has. When a name exists it always
+   appears, because a greeting that knows your name and does not use it reads
+   worse than one that never asked.
+
+   The day is cut into three 8-hour windows (00:00, 08:00, 16:00) and one of the
+   three messages is picked per window. The pick is SEEDED on the date and the
+   window rather than being random on every render, so the dashboard does not
+   deal you a different greeting each time you navigate home; it changes when
+   the window changes, which is the point. */
+const WELCOMES = [
+  /* 00:00–07:59 */
+  [
+    { plain: 'Up early',                 named: (n) => `Up early, ${n}` },
+    { plain: 'Morning: quiet hours are the good ones', named: (n) => `Morning, ${n}: quiet hours are the good ones` },
+    { plain: 'First light, first pass',  named: (n) => `First light, ${n}` },
+  ],
+  /* 08:00–15:59 */
+  [
+    { plain: 'Right, where were we',     named: (n) => `Right, ${n}, where were we` },
+    { plain: 'Good afternoon',           named: (n) => `Good afternoon, ${n}` },
+    { plain: 'Back at it',               named: (n) => `Back at it, ${n}` },
+  ],
+  /* 16:00–23:59 */
+  [
+    { plain: 'Evening shift',            named: (n) => `Evening shift, ${n}` },
+    { plain: 'Good evening',             named: (n) => `Good evening, ${n}` },
+    { plain: 'Last run of the day',      named: (n) => `Last run of the day, ${n}` },
+  ],
+];
+
 function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const now = new Date();
+  const window = Math.floor(now.getHours() / 8);          // 0, 1 or 2
+  const set = WELCOMES[window] || WELCOMES[1];
+  /* Seed: day-of-year + window. Stable within a window so the greeting does not
+     reshuffle every time you navigate home, different across windows and across
+     days so all three actually get used.
+     ⚠️ Do NOT multiply `day` by set.length here: (day*3 + w) % 3 collapses to
+     w % 3, which pins each window to one message forever. Adding is the point. */
+  const day = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const pick = set[(day + window) % set.length];
+  const name = (store.profile().name || '').trim();
+  return name ? pick.named(esc(name)) : pick.plain;
+}
+
+/* ---- beta backup nudge ----------------------------------------------------
+   The site is in beta and everything lives in one browser, so an update or a
+   cleared cache can take a student's whole record with it. This says so once,
+   offers the two buttons that fix it, and then gets out of the way: dismissing
+   snoozes it for a week, and taking a backup snoozes it for a fortnight.
+   It is a card in the flow rather than a modal, because a modal over the
+   dashboard every session is exactly the "annoying" the brief rules out. */
+function betaBackupNudge() {
+  if (Date.now() < store.backupNudgeUntil()) return '';
+  const last = store.lastBackupAt();
+  return `<div class="callout callout-warn beta-nudge mb-5" id="beta-backup">
+    <div class="co-icon">!</div>
+    <div class="co-body">
+      <h4>Keep a backup while the site is in beta</h4>
+      <p class="small">Your results, subjects and settings are saved in this browser only, and beta
+        updates can clear them. A backup file takes a second and restores everything exactly as it
+        was.${last ? '' : ' You have not taken one yet.'}</p>
+      <div class="flex gap-3 mt-3 wrap">
+        <button class="btn btn-primary btn-sm" id="bk-export">Download my data</button>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">
+          Restore from file
+          <input type="file" id="bk-import" accept="application/json,.json" hidden>
+        </label>
+        <button class="btn btn-ghost btn-sm" id="beta-dismiss">Not now</button>
+      </div>
+      <p class="xs muted mt-3" id="bk-status"></p>
+    </div>
+  </div>`;
 }
 
 /* reviewed topics / total topics for one subject */
@@ -36,13 +110,23 @@ function subjectProgress(s) {
 function deadlineRow(x) {
   const s = subjectById[x.subject] || {};
   const k = KINDS[x.kind];
+  /* One channel per fact (see DESIGN-NOTES §3):
+       subject  → colour, on the dot and nowhere else
+       kind     → shape, matching the calendar's filled / solid / dashed marks
+       urgency  → the due pill, which only earns colour when it is actually urgent
+     The old coloured status pill was a third colour saying something the list
+     already implies: What's coming excludes submitted and graded work, so it
+     could only ever read "Not started" or "In progress". That moved to the
+     sub-line as plain text. */
   return `<a class="due-item" href="${x.href}" data-link>
     <span class="cd-dot" style="background:${s.dot || 'var(--accent)'}"></span>
     <span class="due-main">
       <span class="due-title">${x.name}</span>
-      <span class="due-sub">${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.span ? '' : ''}${x.dateText}</span>
+      <span class="due-sub">
+        <span class="due-kind k-${x.kind}" style="--sub:${s.dot || 'var(--accent)'}"
+              aria-hidden="true"></span>${k.noun}${x.code ? ' · ' + x.code : ''} · ${x.dateText}${
+          x.statusLabel && x.kind === 'internal' ? ` · ${x.statusLabel.toLowerCase()}` : ''}</span>
     </span>
-    ${x.statusLabel ? `<span class="int-status" style="background:${x.statusColour}22;color:${x.statusColour};border-color:${x.statusColour}55">${x.statusLabel}</span>` : ''}
     ${duePill(x)}
   </a>`;
 }
@@ -65,7 +149,7 @@ function whatsComing() {
   <div class="card mb-5" id="whats-coming">
     <div class="flex items-center wrap gap-3 mb-3" style="justify-content:space-between">
       <h3>What's coming</h3>
-      <a class="xs" href="#/exams" data-link style="font-weight:600">exams &amp; deadlines →</a>
+      <a class="xs" href="/exams" data-link style="font-weight:600">exams &amp; deadlines →</a>
     </div>
 
     <div class="due-chips" role="group" aria-label="Filter by type">
@@ -81,7 +165,7 @@ function whatsComing() {
 
     ${undated.length ? `
       <p class="xs muted mt-3">
-        ${undated.length} internal${undated.length === 1 ? '' : 's'} ${undated.length === 1 ? 'has' : 'have'} no date yet, so ${undated.length === 1 ? "it can't" : "they can't"} be ranked here: <a href="#/internals" data-link>add ${undated.length === 1 ? 'a date' : 'dates'} →</a>
+        ${undated.length} internal${undated.length === 1 ? '' : 's'} ${undated.length === 1 ? 'has' : 'have'} no date yet, so ${undated.length === 1 ? "it can't" : "they can't"} be ranked here: <a href="/internals" data-link>add ${undated.length === 1 ? 'a date' : 'dates'} →</a>
       </p>` : ''}
   </div>`;
 }
@@ -139,13 +223,14 @@ export function renderHome() {
   return {
     html: `
   <div class="content-inner">
+    ${betaBackupNudge()}
     <!-- 1 ── Hero -->
     <div class="hero mb-5">
-      <h1>${greeting()}, ${esc((store.profile().name || '').trim() || 'there')} </h1>
+      <h1>${greeting()}</h1>
       <p class="hero-sub">Your NCEA Level 3 command centre. Pick a subject, review a topic, keep the streak alive.</p>
       <div class="hero-stats">
         <div class="hero-stat">
-          <div class="hs-num">${nextUp ? nextUp.days : '–'}</div>
+          <div class="hs-num">${nextUp ? nextUp.days : '\u2013'}</div>
           <div class="hs-label">${nextUp ? `Days to ${KINDS[nextUp.kind].noun}` : 'Nothing scheduled'}</div>
         </div>
         <div class="hero-stat"><div class="hs-num">${totalReviewed}<span style="font-size:0.5em;color:var(--phthalo-200)">/${totalTopics}</span></div><div class="hs-label">Topics reviewed</div></div>
@@ -153,7 +238,7 @@ export function renderHome() {
       </div>
 
       <div class="hero-cta">
-        <a class="btn btn-hero" href="#/revise" data-link>Start a revision session</a>
+        <a class="btn btn-hero" href="/revise" data-link>Start a revision session</a>
         <p class="xs hero-cta-sub">Mixed flashcards and questions from whichever topics you're weakest on: ${streak.count > 0 ? `keep the ${streak.count}-day streak going.` : 'ten minutes is enough to start a streak.'}</p>
       </div>
     </div>
@@ -172,7 +257,7 @@ export function renderHome() {
               ? ' · today ✓'
               : ` · ${streak.todayCount || 0}/${store.streakTarget()} today`}</span>
         </div>
-        <a class="snap-stat" href="#/flagged" data-link>
+        <a class="snap-stat" href="/flagged" data-link>
           <span class="snap-icon">🚩</span>
           <span class="snap-num">${flagged}</span>
           <span class="snap-label">flagged</span>
@@ -188,7 +273,7 @@ export function renderHome() {
         <div class="xs muted mb-2">🎯 Weakest topics</div>
         ${weak.length ? `<div class="focus-list">
           ${weak.map(({ std, pct }) => `
-            <a class="focus-item" href="#/topic/${std.topicId}" data-link>
+            <a class="focus-item" href="/topic/${std.topicId}" data-link>
               <span class="fi-score ${pct < 50 ? 'low' : 'mid'}">${pct}%</span>
               <span class="fi-main"><span class="fi-title">${std.title}</span>
                 <span class="fi-sub">${std.subjectName} · ${std.code}</span></span>
@@ -207,7 +292,7 @@ export function renderHome() {
       ${subjects.map(s => {
         const p = subjectProgress(s);
         return `
-        <a class="card card-link subject-tile" href="#/subject/${s.id}" data-link data-subject-accent="${s.id}">
+        <a class="card card-link subject-tile" href="/subject/${s.id}" data-link data-subject-accent="${s.id}">
           <span class="st-accent-bar" style="background:linear-gradient(90deg, ${s.dot}, ${s.dot})"></span>
           <div class="st-top">
             <span class="st-icon" style="background:${hexToSoft(s.dot)};color:${s.dot};border-color:${hexToSoft(s.dot, 0.4)}">${s.icon}</span>
@@ -226,7 +311,16 @@ export function renderHome() {
     </div>
   </div>`,
 
-    onMount() { wireWhatsComing(); },
+    onMount() {
+      wireWhatsComing();
+      /* The nudge reuses the Study Tools implementation verbatim rather than
+         carrying a second copy: same buttons, same ids, same handler. */
+      wireBackupPanel();
+      document.getElementById('beta-dismiss')?.addEventListener('click', () => {
+        store.snoozeBackupNudge(7);
+        document.getElementById('beta-backup')?.remove();
+      });
+    },
   };
 }
 

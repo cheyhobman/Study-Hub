@@ -27,14 +27,47 @@ const AUTO_REVIEW_PCT   = 80;   // … at this average → counts as reviewed
 const AUTO_FLAG_ATTEMPTS = 2;   // separate attempts …
 const AUTO_FLAG_PCT      = 50;  // … averaging below this → auto-flagged
 
+/* ---- read cache -----------------------------------------------------------
+   Every read() used to hit localStorage and JSON.parse the value again. That is
+   fine once, but the render paths call it per ROW: withOverride() reads the
+   whole credit record for each of ~35 standards, and the standards library
+   asked "is this already present?" once per catalogue standard, 175 times, each
+   answer re-parsing two keys. One paint of the Progress page was doing several
+   hundred JSON.parse calls of the same handful of strings.
+
+   The cache holds parsed values keyed by name. write() updates it in step, so
+   it can never serve a stale value for anything this module wrote. Anything
+   that bypasses write() (importAll, or a test clearing storage) must call
+   invalidate(). */
+const cache = new Map();
+function invalidate() { cache.clear(); }
+
 function read(key, fallback) {
+  if (cache.has(key)) {
+    const v = cache.get(key);
+    return v === undefined ? fallback : v;
+  }
   try {
     const raw = localStorage.getItem(NS + key);
-    return raw == null ? fallback : JSON.parse(raw);
+    const v = raw == null ? undefined : JSON.parse(raw);
+    cache.set(key, v);
+    return v === undefined ? fallback : v;
   } catch (e) { return fallback; }
 }
 function write(key, val) {
-  try { localStorage.setItem(NS + key, JSON.stringify(val)); } catch (e) {}
+  try {
+    localStorage.setItem(NS + key, JSON.stringify(val));
+    cache.set(key, val);
+    /* Stamped on every write so cloud sync can tell whether this browser or the
+       account holds the newer copy. Written raw (not via write()) so it never
+       recurses, and excluded from the sync payload so the two sides do not
+       fight over whose timestamp is authoritative. */
+    if (key !== 'lastwrite') {
+      const t = String(Date.now());
+      localStorage.setItem(NS + 'lastwrite', t);
+      cache.set('lastwrite', Number(t));
+    }
+  } catch (e) {}
 }
 
 /* Local calendar date as YYYY-MM-DD (streaks should follow the student's day). */
@@ -214,6 +247,9 @@ export const store = {
      button on Progress. Everything it writes is an ORDINARY EDIT: the same
      shape the table itself writes, so it can be changed or reset afterwards
      exactly like anything the student typed. Nothing here is special-cased. */
+  /** When this browser was last changed. Used by cloud sync to reconcile. */
+  lastLocalWrite() { return Number(read('lastwrite', 0)) || 0; },
+
   hasPersonalRecord() { return read('personalrecord', false); },
   recordOfferDismissed() { return read('recordoffer.skip', false); },
   dismissRecordOffer() { write('recordoffer.skip', true); emit(); },
@@ -371,9 +407,23 @@ export const store = {
     return [...shippedRecord, ...this.extraStandards()]
       .filter(r => !hidden.has(`${r.group}:${r.code}`));
   },
-  /** Would adding `row` duplicate something already present? */
-  isStandardPresent(row) {
-    const mine = new Set(this._presentRows().flatMap(r => this._identity(r)));
+  /** Drop every cached value. Only needed if something wrote to localStorage
+      without going through the store (a restore, or a test clearing storage). */
+  refresh() { invalidate(); emit(); },
+
+  /** The identity set of everything currently on the record.
+      Build it ONCE and hand it to isStandardPresent when testing many rows:
+      the standards library asks 175 times per paint, and rebuilding a ~100
+      entry Set for each of those was the single most expensive thing on the
+      Progress page. */
+  presentIdentitySet() {
+    return new Set(this._presentRows().flatMap(r => this._identity(r)));
+  },
+
+  /** Would adding `row` duplicate something already present?
+      Pass `known` (from presentIdentitySet) in a loop to avoid rebuilding it. */
+  isStandardPresent(row, known = null) {
+    const mine = known || this.presentIdentitySet();
     return this._identity(row).some(id => mine.has(id));
   },
 
@@ -475,25 +525,52 @@ export const store = {
      days. Streaks are checked lazily on read, so a broken streak shows as 0
      even if you never open the app on the day it lapses. */
   /* ---- Backup ------------------------------------------------------------
-     Everything lives in localStorage, so clearing the browser or switching
-     device loses the lot. exportAll()/importAll() make that recoverable. */
+     Everything lives in localStorage, so clearing the browser, switching device
+     or a bad update loses the lot. While the site is in beta that is a real
+     risk, so a backup file is the safety net.
+
+     exportAll() takes EVERY `ncea.` key without a whitelist, on purpose. A
+     whitelist is a list that goes stale: add a feature, forget to add its key,
+     and the backup silently stops covering it. Taking the whole namespace means
+     the export is complete by construction, covering name and school, results
+     and grades, subject and assessment configuration, planner dates, Leitner
+     boxes, quiz history, streak, flags, theme and goal.
+
+     The file is a plain local download that never leaves the device. It stays
+     the user's own record to keep or delete. */
   exportAll() {
     const data = {};
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith(NS)) data[k.slice(NS.length)] = localStorage.getItem(k);
+        if (!k || !k.startsWith(NS)) continue;
+        const short = k.slice(NS.length);
+        /* `lastwrite` is bookkeeping for cloud sync: it records when THIS
+           browser last changed. Carrying it in a backup or a cloud payload
+           would let one device's clock overwrite another's idea of who is
+           newer, which is exactly the comparison it exists to make. */
+        if (short === 'lastwrite') continue;
+        data[short] = localStorage.getItem(k);
       }
     } catch (e) {}
-    return { app: 'ncea-study-hub', version: 1, exportedAt: new Date().toISOString(), data };
+    return {
+      app: 'ncea-study-hub', version: 2,
+      exportedAt: new Date().toISOString(),
+      /* Labelled so a folder of backups is tellable apart at a glance. */
+      profile: { name: (this.profile().name || ''), school: (this.profile().school || '') },
+      counts: { keys: Object.keys(data).length },
+      data,
+    };
   },
   /** @returns {{ok:boolean, keys?:number, error?:string}} */
-  importAll(payload, { merge = false } = {}) {
+  importAll(payload, { merge = false, silent = false } = {}) {
     if (!payload || payload.app !== 'ncea-study-hub' || !payload.data) {
       return { ok: false, error: 'That file is not a Study Hub backup.' };
     }
     try {
       if (!merge) {
+        /* Replace, not merge: a half-restored state (new results over old
+           subjects) is worse than either. Clear our namespace first. */
         const mine = [];
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -502,12 +579,24 @@ export const store = {
         mine.forEach(k => localStorage.removeItem(k));
       }
       Object.entries(payload.data).forEach(([k, v]) => localStorage.setItem(NS + k, v));
+      invalidate();                     // written behind write()'s back
     } catch (e) { return { ok: false, error: String(e) }; }
     reviewed = new Set(read('reviewed', []));
     flagged  = new Set(read('flagged', []));
-    emit();
+    /* `silent` is for a cloud pull: the data has already been reconciled and
+       re-emitting would bounce it straight back up as a "local change". */
+    if (!silent) emit();
     return { ok: true, keys: Object.keys(payload.data).length };
   },
+
+  /* ---- beta backup nudge ---- */
+  backupNudgeUntil() { return read('backupnudge.until', 0); },
+  snoozeBackupNudge(days = 7) {
+    write('backupnudge.until', Date.now() + days * 86400000);
+    emit();
+  },
+  markBackedUp() { write('backupnudge.last', Date.now()); this.snoozeBackupNudge(14); },
+  lastBackupAt() { return read('backupnudge.last', 0); },
 
   streak() {
     const s = read('streak', { count: 0, lastActive: null, todayCount: 0, todayDate: null });

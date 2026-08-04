@@ -125,7 +125,7 @@ export async function renderPrintCards(subjectId) {
 
       <div class="flex gap-3 wrap mb-5">
         <button class="btn btn-primary" id="pc-print">Print flashcards</button>
-        <a class="btn btn-ghost" href="#/subject/${s.id}" data-link>← Back to ${s.name}</a>
+        <a class="btn btn-ghost" href="/subject/${s.id}" data-link>← Back to ${s.name}</a>
       </div>
       <p class="print-hint mb-5">Preview below shows exactly what will print.</p>
     </div>

@@ -10,6 +10,8 @@ import { THEMES } from './themes.js';
 
 import { qs } from './ui.js';
 import { initRouter, renderRoute } from './router.js';
+import { initAuth } from './auth/session.js';
+import { initAuthUI } from './auth/ui.js';
 import { initSearch } from './search.js';
 
 /* ------------------------------------------------- build the sidebar nav */
@@ -28,30 +30,30 @@ function buildNav() {
 
   // Dashboard section
   qs('#nav-top').innerHTML = `
-    <a class="nav-item" href="#/" data-key="home">
+    <a class="nav-item" href="/" data-key="home">
       <span class="nav-dot" style="background:var(--phthalo-300)"></span> Dashboard
     </a>
-    <a class="nav-item" href="#/revise" data-key="revise">
+    <a class="nav-item" href="/revise" data-key="revise">
       <span class="nav-dot" style="background:#E5B94E"></span> Revision session
     </a>
-    <a class="nav-item" href="#/internals" data-key="exams-group">
+    <a class="nav-item" href="/internals" data-key="exams-group">
       <span class="nav-dot" style="background:#E07B39"></span> Assessments
       <span class="nav-meta" id="nav-int-count"></span>
     </a>
-    <a class="nav-item" href="#/progress" data-key="progress">
+    <a class="nav-item" href="/progress" data-key="progress">
       <span class="nav-dot" style="background:#4FA97C"></span> Progress &amp; credits
     </a>
-    <a class="nav-item" href="#/account" data-key="account">
+    <a class="nav-item" href="/account" data-key="account">
       <span class="nav-dot" style="background:#7CC49E"></span> Account
     </a>
-    <a class="nav-item" href="#/command-words" data-key="tools-group">
+    <a class="nav-item" href="/command-words" data-key="tools-group">
       <span class="nav-dot" style="background:#B4DEC8"></span> Study tools
       <span class="nav-meta" id="nav-flag-count"></span>
     </a>`;
 
   // Subjects section
   qs('#nav-subjects').innerHTML = visibleSubjects().map(s => `
-    <a class="nav-item" href="#/subject/${s.id}" data-key="${s.id}">
+    <a class="nav-item" href="/subject/${s.id}" data-key="${s.id}">
       <span class="nav-dot" style="background:${s.dot}"></span> ${s.name}
     </a>`).join('');
 }
@@ -87,8 +89,7 @@ function refreshSidebar() {
 /* Which sidebar item should be lit for the route we are on. The router sets
    this on navigation; this re-applies it after any rebuild of the nav. */
 export function markActiveNav() {
-  const h = location.hash.replace(/^#/, '') || '/';
-  const parts = h.split('#')[0].split('/').filter(Boolean);
+  const parts = (location.pathname || '/').split('/').filter(Boolean);
   const GROUP = { internals: 'exams-group', calendar: 'exams-group', exams: 'exams-group',
                   'command-words': 'tools-group', flagged: 'tools-group' };
   let key = parts.length === 0 ? 'home' : (GROUP[parts[0]] || parts[0]);
@@ -195,15 +196,17 @@ function initMobileMenu() {
 }
 
 /* --------------------------- in-page anchor scrolling (TOC etc.) ----------
-   Hash routing owns links that start with "#/". Plain "#anchor" links (from
-   the table of contents) must NOT trigger the router: intercept them and
-   smooth-scroll instead. */
+   Under history routing the "#/" prefix no longer exists, so every "#..." link
+   is what it looks like: an anchor on the current page. Smooth-scroll it and
+   keep the router out of it. The router's own listener ignores same-path
+   anchors for the same reason, so the two never fight over one click. */
 function initAnchors() {
   document.addEventListener('click', (e) => {
+    if (e.defaultPrevented) return;
     const a = e.target.closest('a');
     if (!a) return;
     const href = a.getAttribute('href') || '';
-    if (href.startsWith('#') && !href.startsWith('#/') && href.length > 1) {
+    if (href.startsWith('#') && href.length > 1) {
       const el = document.getElementById(href.slice(1));
       if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     }
@@ -230,6 +233,13 @@ function boot() {
   // Stamp known course dates onto any planner item that has none (runs once).
   store.applySeedDates(SEED_DATES);
 
+  /* Accounts are an ENHANCEMENT. initAuthUI() paints the top-bar controls (or
+     nothing, if this copy has no keys) immediately; initAuth() then restores
+     any existing session and reconciles in the background. Neither is awaited,
+     so a slow or unreachable backend cannot delay the site rendering. */
+  initAuthUI();
+  initAuth().catch(e => console.error('Auth init failed; running local-only.', e));
+
   initRouter();                 // renders the current route
 
   /* If progress changes on a page that shows it (home/flagged), re-render.
@@ -237,8 +247,8 @@ function boot() {
      a navigation, so throwing the reader back to the top is a bug. The router
      only forces scroll-to-top when it is actually changing page. */
   store.on(() => {
-    const h = location.hash;
-    if (h === '' || h === '#/' || h === '#/flagged') renderRoute({ keepScroll: true });
+    const p = location.pathname;
+    if (p === '/' || p === '/flagged') renderRoute({ keepScroll: true });
   });
 }
 

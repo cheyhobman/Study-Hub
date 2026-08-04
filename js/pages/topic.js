@@ -18,7 +18,7 @@ export async function renderTopic(topicId) {
   const { std, subject, topic } = await getTopic(topicId);
 
   if (!std && !topic) {
-    return { html: `<div class="content-inner"><div class="placeholder"><div class="ph-icon">🧭</div><h3>Topic not found</h3><p>That page doesn’t exist yet. Back to the <a href="#/" data-link>dashboard</a>.</p></div></div>` };
+    return { html: `<div class="content-inner"><div class="placeholder"><div class="ph-icon">🧭</div><h3>Topic not found</h3><p>That page doesn’t exist yet. Back to the <a href="/" data-link>dashboard</a>.</p></div></div>` };
   }
 
   const title = (topic && topic.title) || std.title;
@@ -92,7 +92,7 @@ export async function renderTopic(topicId) {
   <div class="content-inner"${accent ? ` data-topic-accent style="--topic-accent:${accent}"` : ''}>
     ${accent ? '<div class="topic-accent-bar"></div>' : ''}
     ${crumbs([
-      { label: 'Home', href: '#/' },
+      { label: 'Home', href: '/' },
       { label: subject ? subject.name : 'Subject', href: subject ? `#/subject/${subject.id}` : '#/' },
       { label: std ? std.code : title },
     ])}
@@ -117,7 +117,7 @@ export async function renderTopic(topicId) {
       </button>
       ${cat ? dueButton(cat, plannerItem) : ''}
       <span class="tt-spacer"></span>
-      ${subject ? `<a class="tt-jump" href="#/reference/${subject.id}" data-link>Reference sheet →</a>` : ''}
+      ${subject ? `<a class="tt-jump" href="/reference/${subject.id}" data-link>Reference sheet →</a>` : ''}
     </div>
 
     ${cat ? duePanel(cat, plannerItem) : ''}
@@ -215,7 +215,7 @@ function duePanel(cat, item) {
         <strong>${cat.code}</strong> · ${cat.credits} credits · internal
         <div class="xs muted">${cat.title}</div>
       </div>
-      ${item ? `<a class="xs" href="#/internals" data-link>open planner →</a>` : `<span class="xs muted">Saving adds this to <strong>My internals</strong></span>`}
+      ${item ? `<a class="xs" href="/internals" data-link>open planner →</a>` : `<span class="xs muted">Saving adds this to <strong>My internals</strong></span>`}
     </div>
 
     <div class="dp-grid">

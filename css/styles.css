@@ -561,7 +561,7 @@ img, svg { max-width: 100%; }
 .grid { display: grid; gap: var(--sp-4); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-auto { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.grid-auto { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
 
 /* Subject tile (home + subject list) */
 .subject-tile { position: relative; overflow: hidden; }
@@ -820,7 +820,7 @@ sup, sub { line-height: 0; }
 .hero h1 { color:#fff; font-size: var(--fs-2xl); margin-bottom: var(--sp-2); }
 .hero .hero-sub { color: var(--brand-on-dim); font-size: var(--fs-md); max-width: 46ch; }
 .hero-stats { display:flex; gap: var(--sp-6); margin-top: var(--sp-5); }
-.hero-stat .hs-num { font-family: var(--font-figure); font-size: var(--fs-2xl); font-weight:700; font-variant-numeric: tabular-nums; line-height:1; }
+.hero-stat .hs-num { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight:700; font-variant-numeric: tabular-nums; line-height:1; }
 .hero-stat .hs-label { font-size: var(--fs-xs); color: var(--brand-on-dim); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
 
 .countdown-card { display:flex; flex-direction:column; }
@@ -844,9 +844,9 @@ sup, sub { line-height: 0; }
 .streak-sub { font-size: var(--fs-sm); color: var(--muted); }
 
 /* Stat tiles */
-.stat-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: var(--sp-4); }
+.stat-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%),1fr)); gap: var(--sp-4); }
 .stat-tile { background: var(--surface); border:1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); }
-.stat-tile .stt-num { font-family: var(--font-figure); font-size: var(--fs-xl); font-weight:700; font-variant-numeric: tabular-nums; color: var(--text-strong); }
+.stat-tile .stt-num { font-family: var(--font-display); font-size: var(--fs-xl); font-weight:700; font-variant-numeric: tabular-nums; color: var(--text-strong); }
 .stat-tile .stt-label { font-size: var(--fs-xs); color: var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-top:2px; }
 
 /* ---- Topic toolbar (review/flag) ---- */
@@ -1077,9 +1077,12 @@ sup, sub { line-height: 0; }
    --------------------------------------------------------------------------- */
 .prog-top { display:grid; grid-template-columns: 1.15fr 1fr; gap: var(--sp-5); align-items:start; }
 .prog-donut h3, .prog-goal h3 { margin-bottom: var(--sp-4); }
+/* §2: display-scale figures use Newsreader (hero, donut centre, goal, tiles,
+   snapshot). Everything inside table.data keeps Inter, where tabular numerals
+   have to align down a column. That split is deliberate, not an oversight. */
 .dn-wrap { display:flex; gap: var(--sp-5); align-items:center; flex-wrap:wrap; }
 .donut { flex:none; }
-.donut .dn-top { font-family: var(--font-figure); font-size: 30px; font-weight:700; font-variant-numeric: tabular-nums; fill: var(--text-strong); }
+.donut .dn-top { font-family: var(--font-display); font-size: 30px; font-weight:700; font-variant-numeric: tabular-nums; fill: var(--text-strong); }
 .donut .dn-sub { font-size: 12px; fill: var(--muted); font-family: var(--font-body); }
 .dn-legend { display:flex; flex-direction:column; gap:7px; min-width:180px; flex:1; }
 .dn-key { display:flex; align-items:center; gap:8px; font-size: var(--fs-sm); }
@@ -1089,7 +1092,7 @@ sup, sub { line-height: 0; }
 .goal-picker { display:flex; gap: var(--sp-3); flex-wrap:wrap; }
 .goal-picker .sa-input { flex:1; min-width:150px; }
 .goal-figure { margin-top: var(--sp-5); }
-.gf-num { font-family: var(--font-figure); font-size: var(--fs-2xl); font-weight:700; font-variant-numeric: tabular-nums; color: var(--accent); line-height:1; }
+.gf-num { font-family: var(--font-display); font-size: var(--fs-2xl); font-weight:700; font-variant-numeric: tabular-nums; color: var(--accent); line-height:1; }
 .gf-of { font-size:0.45em; color: var(--muted); }
 .subj-bar { margin-bottom: var(--sp-4); }
 .subj-bar:last-child { margin-bottom:0; }
@@ -1104,7 +1107,7 @@ tr.tbl-subj .cd-dot { display:inline-block; width:9px; height:9px; border-radius
 /* ---------------------------------------------------------------------------
    COMMAND WORDS + EXAM TIMER
    --------------------------------------------------------------------------- */
-.cw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap: var(--sp-4); }
+.cw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(320px, 100%),1fr)); gap: var(--sp-4); }
 .cw-card { background: var(--surface); border:1px solid var(--border); border-left:4px solid var(--accent);
   border-radius: var(--r-lg); padding: var(--sp-5); box-shadow: var(--shadow-xs); }
 .cw-head { display:flex; align-items:center; justify-content:space-between; gap: var(--sp-3); margin-bottom: var(--sp-3); }
@@ -1289,8 +1292,16 @@ tr.tbl-subj .cd-dot { display:inline-block; width:9px; height:9px; border-radius
    items down to about 250px. */
 .due-list {
   display: grid; gap: var(--sp-2);
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  /* min(310px, 100%) not 310px: a bare 310px floor is a track WIDER than the
+     container once the phone is narrower than that, and the row then hangs off
+     the right-hand edge. min() lets the floor collapse to the container.
+     minmax(...,1fr) rather than 1fr because a plain 1fr is minmax(auto,1fr),
+     and `auto` means min-content, which a nowrap title inflates without limit. */
+  grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr));
 }
+/* Grid and flex children default to min-width:auto, so they refuse to shrink
+   below their content. Every ellipsis in here depends on this being 0. */
+.due-list > * { min-width: 0; }
 .due-item, .int-row {
   display:flex; align-items:center; gap: var(--sp-3);
   padding: 9px var(--sp-4); border:1px solid var(--border);
@@ -1313,9 +1324,24 @@ tr.tbl-subj .cd-dot { display:inline-block; width:9px; height:9px; border-radius
   border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-strong);
   font-variant-numeric: tabular-nums; white-space:nowrap;
 }
-.due-pill.soon    { background: var(--warn-bg); color: var(--warn); }
+/* §3: colour is reserved for things that are ACTUALLY urgent. When every pill
+   is coloured, none of them reads as a warning. "Soon" is now weight only;
+   today and overdue keep the colour, and earn it. */
+.due-pill.soon    { background: transparent; color: var(--text-strong); font-weight: 700; }
 .due-pill.today   { background: var(--bad-bg);  color: var(--bad); }
 .due-pill.overdue { background: var(--bad); color:#fff; }
+
+/* Kind by shape, the same language the calendar uses: an internal is filled,
+   an external is solid and heavier, a derived-grade exam is dashed. Subject
+   colour still carries through via --sub, so the two facts never collide. */
+.due-kind {
+  display: inline-block; width: 9px; height: 9px;
+  margin-right: 7px; border-radius: 2px; vertical-align: baseline;
+  border: 1px solid color-mix(in srgb, var(--sub) 55%, transparent);
+}
+.due-kind.k-internal { background: color-mix(in srgb, var(--sub) 22%, transparent); }
+.due-kind.k-external { background: var(--sub); border-color: var(--sub); }
+.due-kind.k-derived  { background: transparent; border-style: dashed; }
 
 .int-status {
   flex:none; font-size:0.7rem; font-weight:600; padding:3px 10px;
@@ -1364,7 +1390,12 @@ fieldset.field { border:1px solid var(--border); border-radius: var(--r-md); pad
      with min-width:0) gets crushed to ~18px by the fixed-width status pill,
      due pill and action buttons beside it, and the title wraps one word per
      line. The pills and buttons then flow onto a second row underneath. */
-  .due-list { grid-template-columns: 1fr; }
+  .due-list { grid-template-columns: minmax(0, 1fr); }
+  /* The add-a-subject tables sit straight inside <details> with no .table-wrap
+     around them, so on a phone they hung past the card. display:block turns the
+     table into a scrollable box without disturbing its internal column layout;
+     desktop is untouched because this only applies at mobile widths. */
+  .lib-sub .lib-table { display: block; overflow-x: auto; max-width: 100%; }
   .due-item, .int-row { flex-wrap: wrap; row-gap: var(--sp-2); max-width: 100%; }
   /* min-width:100% was the bug here: it stopped the row shrinking, so a long
      nowrap title pushed the whole card past the viewport and gave the phone a
@@ -1390,7 +1421,7 @@ fieldset.field { border:1px solid var(--border); border-radius: var(--r-md); pad
 
 .rv-setup .field + .field { margin-top: var(--sp-5); }
 .rv-setup legend { font-weight:700; margin-bottom: var(--sp-3); }
-.rv-scope { display:grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: var(--sp-3); }
+.rv-scope { display:grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%),1fr)); gap: var(--sp-3); }
 .rv-chip { position:relative; cursor:pointer; }
 .rv-chip input { position:absolute; opacity:0; width:0; height:0; }
 .rv-chip span {
@@ -1445,7 +1476,7 @@ fieldset.field { border:1px solid var(--border); border-radius: var(--r-md); pad
 }
 .dp-head { display:flex; justify-content:space-between; gap: var(--sp-4); flex-wrap:wrap; align-items:flex-start;
   padding-bottom: var(--sp-4); margin-bottom: var(--sp-4); border-bottom:1px solid var(--border); }
-.dp-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.dp-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%),1fr)); gap: var(--sp-4); margin-bottom: var(--sp-4); }
 .dp-dates { display:grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .dp-dates.dp-exact { grid-template-columns: 1fr; }
 .due-panel .field { margin:0; }
@@ -1481,7 +1512,7 @@ fieldset.field { border:1px solid var(--border); border-radius: var(--r-md); pad
 }
 a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
 .snap-icon { font-size: 1.05rem; line-height:1; }
-.snap-num { font-family: var(--font-figure); font-size: 1.35rem; font-weight:700; font-variant-numeric: tabular-nums; }
+.snap-num { font-family: var(--font-display); font-size: 1.35rem; font-weight:700; font-variant-numeric: tabular-nums; }
 .snap-label { font-size: var(--fs-xs); color: var(--muted); }
 .snap-focus { min-width:0; }
 
@@ -1544,7 +1575,7 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
 :is([data-theme="dark"],[data-theme="midnight"],[data-theme="ocean"]) .cl-swatch.k-external { background: var(--accent); }
 .cl-swatch.cl-today   { background: var(--warn); }
 
-.cal-months { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--sp-6); }
+.cal-months { display:grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--sp-6); }
 .cal-month { min-width:0; }
 /* A month with nothing in it recedes, but must stay readable — .55 over a dark
    grid was close to invisible. */
@@ -1783,8 +1814,13 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
    full height of the row and the whole gutter, and is always interactive.
    Because it is a DESCENDANT of the row, tr:hover stays true the whole way
    across, so the button cannot vanish mid-journey. */
+/* The remove-X lives in a gutter hanging off the right edge of the table.
+   38px, not 44: the table can render a few pixels wider than its column
+   depending on content, and at 44 the gutter tipped past the viewport and gave
+   the whole document a 5px horizontal scroll. 38 clears the 24px button with
+   room either side and always fits inside the page's right-hand padding. */
 .cr-xzone {
-  position: absolute; top: 0; bottom: 0; right: -44px; width: 44px;
+  position: absolute; top: 0; bottom: 0; right: -38px; width: 38px;
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -1835,7 +1871,7 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
 /* ============================================================================
    Account page
    ========================================================================== */
-.course-facts { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: var(--sp-4); margin-top: var(--sp-4); }
+.course-facts { display:grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%),1fr)); gap: var(--sp-4); margin-top: var(--sp-4); }
 .course-facts > div { display:flex; flex-direction:column; gap:2px; padding: var(--sp-3) var(--sp-4);
   background: var(--bg-tint); border:1px solid var(--border); border-radius: var(--r-sm); }
 .cf-label { font-size: var(--fs-xs); color: var(--muted); text-transform:uppercase; letter-spacing:.05em; }
@@ -1865,7 +1901,9 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
   background-position: right 9px center;
   text-overflow: ellipsis;
 }
-#credit-table .cr-status { min-width: 15.5rem; }
+/* 15rem gives the status text a little slack without clipping (measured: 237px
+   of content in a 240px box). */
+#credit-table .cr-status { min-width: 15rem; }
 #credit-table .cr-grade  { min-width: 8.5rem; }
 #credit-table .cr-credits {
   width: 3.4rem;                        /* two digits plus the spinner */
@@ -1976,9 +2014,15 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
 /* ---- skeleton loading ---------------------------------------------------- */
 /* Shown only when a route takes more than ~140ms to resolve (see router.js).
    The shimmer is a single moving highlight rather than a pulsing opacity: it
-   reads as "working" instead of "broken". */
+   reads as "working" instead of "broken".
+
+   The skeletons reuse the REAL container classes (.card, .stat-row, .stat-tile,
+   .due-item) so the page is structurally correct while loading and the real
+   content drops into the same boxes without reflow. Only the inner content is
+   faked; the frame is genuine. */
 .sk-wrap { animation: sk-fade .18s ease; }
 @keyframes sk-fade { from { opacity: 0 } to { opacity: 1 } }
+
 .sk {
   border-radius: var(--r-sm);
   background: var(--border);
@@ -1988,25 +2032,331 @@ a.snap-stat:hover { background: var(--bg-tint); text-decoration:none; }
   background-repeat: no-repeat;
   animation: sk-shimmer 1.25s ease-in-out infinite;
   margin-bottom: var(--sp-3);
+  flex: none;
 }
 @keyframes sk-shimmer {
   from { background-position: -220px 0 }
   to   { background-position: calc(100% + 220px) 0 }
 }
-.sk-body { margin-top: var(--sp-5); }
-.sk-block { margin-bottom: var(--sp-5); }
-.sk-row  { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); }
-.sk-row2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--sp-4); margin-top: var(--sp-4); }
-.sk-tile { height: 96px; margin: 0; }
-.sk-card { height: 320px; margin: 0; }
-.sk-cal  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.sk-cell { height: 58px; margin: 0; border-radius: var(--r-xs, 4px); }
 
+.sk-head {
+  min-height: 156px;                 /* = real .page-head */
+  margin-bottom: var(--sp-5);        /* = its 32px margin */
+  display: flex; flex-direction: column; justify-content: center;
+}
+.sk-tabs   { height: 44px; margin-bottom: var(--sp-4); border-radius: var(--r-md); }
+.sk-crumbs { height: 24px; width: 40%; margin-bottom: var(--sp-3); }
+.sk-body > * + * { margin-top: var(--sp-4); }
+.sk-card-real > .sk:last-child { margin-bottom: 0; }
+
+/* stat tiles: the real .stat-row grid, faked contents */
+.sk-stat-row { margin-bottom: var(--sp-4); }
+.sk-tile-real > .sk:last-child { margin-bottom: 0; }
+
+/* two-column blocks (progress: donut + goal) */
+.sk-two { display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--sp-4); }
+.sk-donut {
+  width: 190px; height: 190px; border-radius: 50%;
+  margin: var(--sp-4) auto;
+}
+
+/* table skeleton: real row rhythm, real column widths */
+.sk-table { margin-top: var(--sp-3); }
+.sk-tr {
+  display: flex; gap: var(--sp-4); align-items: center;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+  overflow: hidden;                 /* belt and braces: never spill the card */
+}
+.sk-tr .sk { margin-bottom: 0; }
+.sk-tr:last-child { border-bottom: 0; }
+.sk-th { border-bottom: 1px solid var(--border-strong); padding: 8px 0; }
+
+/* calendar */
+.sk-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: var(--sp-3); }
+.sk-cell { height: 58px; margin: 0; border-radius: 4px; }
+
+/* filter chips */
+.sk-chips { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-3); }
+.sk-chip { width: 84px; height: 30px; border-radius: 999px; margin: 0; }
+.sk-chip.wide { width: 150px; height: 44px; border-radius: var(--r-md); }
+
+/* what's coming rows: the real .due-item box, faked contents */
+.sk-due { margin-top: var(--sp-3); }
+.sk-due-item { pointer-events: none; }
+.sk-dot { width: 8px; height: 8px; border-radius: 50%; margin: 0; }
+.sk-due-main { flex: 1; min-width: 0; }
+.sk-due-main .sk:last-child { margin-bottom: 0; }
+.sk-pill { width: 44px; height: 20px; border-radius: 999px; margin: 0; }
+
+/* dashboard hero */
+.sk-hero {
+  background: var(--brand-deep); border-radius: var(--r-lg);
+  padding: var(--sp-6); margin-bottom: var(--sp-5);
+}
+.sk-hero .sk { background: rgba(255,255,255,.13); background-image: linear-gradient(90deg,
+  transparent 0%, rgba(255,255,255,.10) 50%, transparent 100%); }
+.sk-hero-stats { display: flex; gap: var(--sp-6); margin-top: var(--sp-5); flex-wrap: wrap; }
+
+/* subject grid + topic article */
+.sk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: var(--sp-4); }
+.sk-topic { display: grid; grid-template-columns: 1fr minmax(0, 240px); gap: var(--sp-5); align-items: start; }
+.sk-topic-main > * + * { margin-top: var(--sp-4); }
+
+@media (max-width: 900px) {
+  .sk-topic { grid-template-columns: 1fr; }
+  .sk-topic-rail { display: none; }
+}
 @media (max-width: 640px) {
-  .sk-row  { grid-template-columns: repeat(2, 1fr); }
-  .sk-row2 { grid-template-columns: 1fr; }
+  .sk-two { grid-template-columns: 1fr; }
+  .sk-tr .sk:nth-child(n+4) { display: none; }
+  .sk-cell { height: 44px; }
+  .sk-donut { width: 150px; height: 150px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; }
   .sk-wrap { animation: none; }
+}
+
+/* ---- beta backup nudge --------------------------------------------------- */
+/* Sits above the hero, so it is seen, but styled as a card in the flow rather
+   than a modal: it must not block the dashboard every time the site opens. */
+.beta-nudge { border-left-width: 3px; }
+.beta-nudge .co-body h4 { margin-bottom: 4px; }
+@media (max-width: 640px) {
+  .beta-nudge .flex { flex-direction: column; align-items: stretch; }
+  .beta-nudge .btn { width: 100%; text-align: center; }
+}
+
+/* ---- shared X animation, reused wherever something can be removed --------- */
+/* The .x-btn rule higher up owns the look and the 90° hover spin. These three
+   placements only decide WHERE the button sits; none of them restate the
+   animation, so the site cannot drift into three different crosses. */
+
+/* Subject header cross: sits just after the subject name, hidden until the row
+   is hovered so the grouped table stays uncluttered.
+   The header cell is colspan=5 and its content (name + code + cross) is far
+   narrower than the sum of the data columns, so an inline cross does not drive
+   the table's width. It is laid out in an inline-flex row with the name so it
+   follows names of any length, from "English" to "Design & Visual
+   Communication". */
+tr.tbl-subj td { position: relative; }
+.subj-x {
+  position: static;
+  margin-left: 2px;
+  vertical-align: middle;
+  width: 20px; height: 20px;
+}
+tr.tbl-subj:hover .subj-x,
+tr.tbl-subj:focus-within .subj-x { opacity: .7; pointer-events: auto; }
+tr.tbl-subj .subj-x:hover {
+  opacity: 1; color: var(--bad); background: var(--bad-bg);
+  transform: rotate(90deg) scale(1.12);
+}
+.subj-x:active { transform: rotate(90deg) scale(.9); }
+
+/* Item 8: Assessments page. Same cross, same spin, but it keeps the position it
+   already had, in the row's action group, and stays visible there because that
+   list has no hover-gutter to reveal it from. */
+.int-actions .x-btn {
+  opacity: .55;
+  pointer-events: auto;
+  width: 26px; height: 26px;
+}
+.int-row:hover .int-actions .x-btn { opacity: .8; }
+.int-actions .x-btn:hover {
+  opacity: 1; color: var(--bad); background: var(--bad-bg);
+  transform: rotate(90deg) scale(1.12);
+}
+/* flashcard-shaped block for the revision session skeleton */
+.sk-fc { width: 100%; height: 230px; border-radius: var(--r-lg); margin: var(--sp-4) 0; }
+@media (max-width: 640px) { .sk-fc { height: 180px; } }
+.sk-head-tall { min-height: 324px; }              /* = topic .page-head */
+.sk-toolbar { height: 72px; margin-bottom: var(--sp-5); border-radius: var(--r-md); }
+/* Sits immediately after the subject code, not floated off to the far right. */
+tr.tbl-subj td .subj-name { position: relative; }
+
+
+/* ---- touch targets ------------------------------------------------------- */
+/* Desktop keeps its compact density; touch gets targets you can actually hit.
+   The crosses matter most: at 20–24px they were smaller than a fingertip AND
+   destructive, which is the worst combination. The hit area is expanded with a
+   pseudo-element so the glyph itself does not grow and the layout is unchanged. */
+@media (hover: none), (pointer: coarse), (max-width: 720px) {
+  .x-btn { position: relative; }
+  .x-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 44px; height: 44px;
+    transform: translate(-50%, -50%);
+  }
+  /* The subject cross sits in a table header row; keep its box a little tighter
+     so it cannot overlap the row above. */
+  .subj-x::after { width: 40px; height: 40px; }
+
+  /* Small buttons and the inline credit input, sized for a thumb. */
+  .btn-sm { min-height: 40px; padding-top: 8px; padding-bottom: 8px; }
+  #credit-table .cr-credits,
+  #credit-table .cr-status,
+  #credit-table .cr-grade { min-height: 40px; }
+  .goal-star { width: 40px; height: 40px; }
+}
+
+/* ---- §4 subject header: name first, class code second --------------------- */
+/* The table used to be headed "13CHE" while the sidebar, calendar, timetable
+   and dashboard all said "Chemistry". The code still matters (it is what the
+   school and the derived-grade timetable use) but it is secondary. */
+tr.tbl-subj td .subj-name { font-size: var(--fs-sm); }
+tr.tbl-subj td .subj-code {
+  margin-left: 8px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+
+
+/* ---- §5 first run --------------------------------------------------------- */
+/* One question, not a wall of empty fields. Sized generously because it is the
+   only thing on the page at this point. */
+.firstrun { padding: var(--sp-6); }
+.firstrun .fr-q {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  margin-bottom: var(--sp-3);
+}
+.firstrun p { max-width: 58ch; }
+
+/* ============================================================================
+   ACCOUNTS: top-bar controls, and the sign up / log in dialog
+   ========================================================================== */
+
+/* ---- top bar --------------------------------------------------------------*/
+.auth-actions { display: flex; align-items: center; gap: var(--sp-2); }
+
+.acct-menu { position: relative; }
+.acct-trigger {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 9px 5px 5px;
+  background: none; border: 1px solid var(--border); border-radius: var(--r-pill);
+  color: var(--text); cursor: pointer; font: inherit; font-size: var(--fs-sm);
+  transition: border-color var(--transition), background var(--transition);
+}
+.acct-trigger:hover { border-color: var(--accent); background: var(--bg-tint); }
+.acct-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acct-avatar {
+  display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent); color: var(--on-accent);
+  font-size: 0.68rem; font-weight: 700; letter-spacing: .02em;
+}
+.acct-name { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.acct-pop {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  min-width: 216px; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); box-shadow: var(--shadow-lg);
+  padding: var(--sp-2); overflow: hidden;
+}
+.acct-head { padding: var(--sp-3); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-2); }
+.acct-head strong { display: block; }
+.acct-item {
+  display: block; width: 100%; text-align: left;
+  padding: 9px var(--sp-3); border: 0; background: none;
+  color: var(--text); font: inherit; font-size: var(--fs-sm);
+  border-radius: var(--r-sm); cursor: pointer; text-decoration: none;
+}
+.acct-item:hover { background: var(--bg-tint); text-decoration: none; }
+.acct-danger { color: var(--bad); }
+
+@media (max-width: 720px) {
+  /* The name is the first thing to go; the avatar still identifies the account. */
+  .acct-name, .acct-trigger svg { display: none; }
+  .acct-trigger { padding: 4px; border-color: transparent; }
+}
+
+/* ---- dialog ---------------------------------------------------------------*/
+body.auth-open { overflow: hidden; }
+
+.auth-root { position: fixed; inset: 0; z-index: 200; }
+.auth-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(6, 18, 12, .62);
+  backdrop-filter: blur(3px);
+  opacity: 0; transition: opacity .18s ease;
+}
+.auth-root.is-open .auth-backdrop { opacity: 1; }
+
+.auth-dialog {
+  position: relative;
+  width: min(420px, calc(100vw - 2 * var(--sp-4)));
+  max-height: calc(100vh - 2 * var(--sp-5));
+  overflow-y: auto;
+  margin: max(var(--sp-5), 8vh) auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-6);
+  opacity: 0; transform: translateY(10px) scale(.985);
+  transition: opacity .2s ease, transform .2s cubic-bezier(.34, 1.3, .64, 1);
+}
+.auth-root.is-open .auth-dialog { opacity: 1; transform: none; }
+
+.auth-close { position: absolute; top: 10px; right: 10px; }
+.auth-dialog h2 { font-family: var(--font-display); font-size: var(--fs-xl); margin-bottom: var(--sp-2); }
+.auth-lede { color: var(--muted); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
+.auth-dialog .field { margin-bottom: var(--sp-4); }
+.btn-block { width: 100%; justify-content: center; margin-top: var(--sp-2); }
+
+.auth-error {
+  background: var(--bad-bg); color: var(--bad);
+  border-left: 3px solid var(--bad);
+  padding: 9px var(--sp-4); border-radius: var(--r-sm);
+  font-size: var(--fs-sm); margin-bottom: var(--sp-3);
+}
+
+.auth-foot {
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  margin-top: var(--sp-5); padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm); color: var(--muted); text-align: center;
+}
+.auth-note {
+  margin-top: var(--sp-4); padding: var(--sp-3);
+  background: var(--bg-tint); border-radius: var(--r-sm);
+  font-size: var(--fs-xs); color: var(--muted);
+}
+.auth-code { letter-spacing: .35em; font-family: var(--font-mono); text-align: center; font-size: var(--fs-lg); }
+
+/* Google: the standard neutral button, not restyled into the site's palette.
+   People recognise it by its shape and mark, and a green one reads as a fake. */
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 11px var(--sp-4);
+  background: #fff; color: #1f1f1f;
+  border: 1px solid #dadce0; border-radius: var(--r-md);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  cursor: pointer; transition: background var(--transition), box-shadow var(--transition);
+}
+.btn-google:hover { background: #f7f8f8; box-shadow: var(--shadow-xs); }
+.btn-google:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-google:disabled { opacity: .6; cursor: default; }
+
+.auth-or {
+  position: relative; text-align: center; margin: var(--sp-4) 0;
+  font-size: var(--fs-xs); color: var(--faint); text-transform: uppercase; letter-spacing: .08em;
+}
+.auth-or::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid var(--border);
+}
+.auth-or span { position: relative; background: var(--surface); padding: 0 var(--sp-3); }
+
+.spinner-sm { width: 13px; height: 13px; border-width: 2px; margin-right: 7px; vertical-align: -1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-backdrop, .auth-dialog { transition: none; }
 }

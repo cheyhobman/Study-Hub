@@ -53,7 +53,7 @@ export async function renderReference(subjectId) {
   const html = `
   <div class="content-inner">
     <div class="no-print">
-      ${crumbs([{ label: 'Home', href: '#/' }, { label: s.name, href: `#/subject/${s.id}` }, { label: 'Reference sheet' }])}
+      ${crumbs([{ label: 'Home', href: '/' }, { label: s.name, href: `/subject/${s.id}` }, { label: 'Reference sheet' }])}
       <div class="flex items-center wrap gap-3" style="justify-content:space-between">
         ${pageHead({ eyebrow: `${s.icon} ${s.name}`, title: `${s.name}, quick reference`, lede: '' }).replace('</header>', '')}
         <button class="btn btn-primary no-print" id="btn-print" style="align-self:flex-start">🖨 Print sheet</button>

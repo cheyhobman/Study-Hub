@@ -25,7 +25,7 @@ export default {
 
   title: 'Spectroscopic data',
   tags: ['Mass spec', 'IR', '¹³C NMR', 'Structure ID'],
-  intro: 'Three techniques that, combined, let you identify an unknown organic molecule: <strong>mass spectrometry</strong> (molar mass, nitrogen, halogens, fragments), <strong>infrared</strong> (which functional groups) and <strong>¹³C NMR</strong> (how many carbon environments, and what kind). The assessed skill is integrating all three. That is exactly what separates Achieved from Excellence. Learn it alongside <a href="#/topic/chem-91391" data-link>Organic compounds →</a>, whose molecules are the ones you will be identifying.',
+  intro: 'Three techniques that, combined, let you identify an unknown organic molecule: <strong>mass spectrometry</strong> (molar mass, nitrogen, halogens, fragments), <strong>infrared</strong> (which functional groups) and <strong>¹³C NMR</strong> (how many carbon environments, and what kind). The assessed skill is integrating all three. That is exactly what separates Achieved from Excellence. Learn it alongside <a href="/topic/chem-91391" data-link>Organic compounds →</a>, whose molecules are the ones you will be identifying.',
 
   flashcards: [
     /* ---- the standard itself ---- */

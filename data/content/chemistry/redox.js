@@ -13,7 +13,7 @@ export default {
 
   title: 'Oxidation-reduction processes',
   tags: ['Half-equations', 'Oxidation numbers', 'E° cells', 'Electrolysis'],
-  intro: 'Reactions where electrons transfer. You’ll assign oxidation numbers, write and combine half-equations, use standard potentials to predict cell voltages and spontaneity, and handle redox titrations. Spontaneity (E°cell) mirrors the ΔG idea from <a href="#/topic/chem-91390" data-link>Thermochemical principles →</a>.',
+  intro: 'Reactions where electrons transfer. You’ll assign oxidation numbers, write and combine half-equations, use standard potentials to predict cell voltages and spontaneity, and handle redox titrations. Spontaneity (E°cell) mirrors the ΔG idea from <a href="/topic/chem-91390" data-link>Thermochemical principles →</a>.',
 
   flashcards: [
     { q: 'Calculate the oxidation number of Mn in MnO₄⁻', a: '+7', explain: 'Four oxygens at −2 = −8; total charge is −1, so Mn = +7. It is reduced to +2 in Mn²⁺, a 5-electron change.' },

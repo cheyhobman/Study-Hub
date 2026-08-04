@@ -6,7 +6,7 @@
 export default {
   title: 'Equilibrium principles in aqueous systems',
   tags: ['pH', 'Ka / Kb', 'Buffers', 'Solubility (Ks)', 'Titrations'],
-  intro: 'Acid–base and solubility equilibria in water. You’ll calculate pH of strong and weak acids/bases, explain and calculate buffers, work with solubility products (Ks), and interpret titration curves. Take care with logs and assumptions. The Le Châtelier reasoning links to <a href="#/topic/chem-91390" data-link>Thermochemical principles →</a> and <a href="#/topic/chem-91393" data-link>Redox →</a>.',
+  intro: 'Acid–base and solubility equilibria in water. You’ll calculate pH of strong and weak acids/bases, explain and calculate buffers, work with solubility products (Ks), and interpret titration curves. Take care with logs and assumptions. The Le Châtelier reasoning links to <a href="/topic/chem-91390" data-link>Thermochemical principles →</a> and <a href="/topic/chem-91393" data-link>Redox →</a>.',
 
   flashcards: [
     { q: 'Define a Brønsted–Lowry acid and base', a: 'Acid = proton (H⁺) donor; base = proton acceptor', explain: 'Every acid–base reaction transfers a proton and creates a conjugate pair on each side.' },

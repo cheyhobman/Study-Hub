@@ -55,16 +55,16 @@ export const NAV_GROUPS = {
   exams: {
     navKey: 'exams-group',
     tabs: [
-      { key: 'internals', label: '📝 My internals', href: '#/internals' },
-      { key: 'calendar',  label: 'Calendar',       href: '#/calendar' },
-      { key: 'timetable', label: '📅 Exam timetable', href: '#/exams' },
+      { key: 'internals', label: '📝 My internals', href: '/internals' },
+      { key: 'calendar',  label: 'Calendar',       href: '/calendar' },
+      { key: 'timetable', label: '📅 Exam timetable', href: '/exams' },
     ],
   },
   tools: {
     navKey: 'tools-group',
     tabs: [
-      { key: 'command-words', label: '🔤 Command words', href: '#/command-words' },
-      { key: 'flagged', label: '🚩 Flagged for review', href: '#/flagged' },
+      { key: 'command-words', label: '🔤 Command words', href: '/command-words' },
+      { key: 'flagged', label: '🚩 Flagged for review', href: '/flagged' },
     ],
   },
 };

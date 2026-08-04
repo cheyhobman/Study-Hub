@@ -21,6 +21,7 @@
 import { visibleSubjects, subjectById, allStandards, getSubjectContent } from '../registry.js';
 const subjects = () => visibleSubjects();
 import { store } from '../store.js';
+import { go } from '../router.js';
 import { shuffle, toast, renderMathIn, normalise } from '../ui.js';
 import { isCardDue, nextBox, boxOf } from '../leitner.js';
 import { revisionScope } from '../revision-scope.js';
@@ -372,15 +373,28 @@ export function renderRevise() {
         store.setReviseCfg({ scope, length, mode, focus });
 
         const host = document.getElementById('content');
-        host.innerHTML = `<div class="content-inner"><div class="rv-loading">
-          <span class="spinner"></span> Building your session…</div></div>`;
+        /* Skeleton in the SHAPE of a running session (progress bar, card, grade
+           buttons) rather than a bare spinner, so the first item drops into a
+           frame that is already there instead of the layout appearing at once. */
+        host.innerHTML = `<div class="content-inner sk-wrap" aria-busy="true" aria-live="polite">
+          <span class="sr-only">Building your session</span>
+          <div class="sk" style="width:9rem;height:12px"></div>
+          <div class="sk" style="width:100%;height:8px;border-radius:999px"></div>
+          <div class="card sk-card-real" style="margin-top:var(--sp-4)">
+            <div class="sk" style="width:35%;height:11px"></div>
+            <div class="sk sk-fc"></div>
+            <div class="sk-chips">
+              <div class="sk sk-chip"></div><div class="sk sk-chip"></div><div class="sk sk-chip"></div>
+            </div>
+          </div>
+        </div>`;
 
         const { items, skipped } = await buildQueue(scope, length, mode, focus);
         if (!items.length) {
           host.innerHTML = `<div class="content-inner"><div class="empty-state">
             <div class="es-icon">📭</div><h3>Nothing to revise here yet</h3>
             <p>That subject has no flashcards or questions written yet. Try <strong>Everything</strong> instead.</p>
-            <button class="btn btn-primary" onclick="location.hash='#/revise'">← Back to setup</button>
+            <button class="btn btn-primary" id="rv-back-setup">← Back to setup</button>
           </div></div>`;
           return;
         }
@@ -597,7 +611,7 @@ function runSession(host, { items, skipped = [], scope }) {
     const ex = box.querySelector('#rv-explain');
     ex.innerHTML = `<b>${correct ? '✓ Correct.' : dunno ? 'No worries: here it is.' : '✗ Not quite.'}</b> ` +
       `${!correct && q.type === 'sa' && q.answer ? `Answer: <b>${q.answer}</b>. ` : ''}` +
-      `${q.explanation || ''} <a class="xs" href="#/topic/${item.topic.topicId}" data-link>study this topic →</a>`;
+      `${q.explanation || ''} <a class="xs" href="/topic/${item.topic.topicId}" data-link>study this topic →</a>`;
     ex.classList.add('show');
     renderMathIn(ex);
     log.push({ topicId: item.topic.topicId, title: item.topic.title, kind: 'q', correct });
@@ -680,7 +694,7 @@ function runSession(host, { items, skipped = [], scope }) {
           <h3 class="mb-3">Where you dropped marks</h3>
           <div class="focus-list mb-5">
             ${weak.map(t => `
-              <a class="focus-item" href="#/topic/${t.id}" data-link>
+              <a class="focus-item" href="/topic/${t.id}" data-link>
                 <span class="fi-score ${t.pct < 50 ? 'low' : 'mid'}">${t.pct}%</span>
                 <span class="fi-main"><span class="fi-title">${t.title}</span>
                   <span class="fi-sub">${t.right} of ${t.total} right this session</span></span>
@@ -690,14 +704,15 @@ function runSession(host, { items, skipped = [], scope }) {
 
         <div class="flex gap-3 wrap" style="justify-content:center">
           <button class="btn btn-primary" id="rv-again">↻ Another session</button>
-          <a class="btn btn-ghost" href="#/" data-link>Back to dashboard</a>
+          <a class="btn btn-ghost" href="/" data-link>Back to dashboard</a>
         </div>
         <p class="xs muted mt-3">Wrong flashcards have dropped back to Box 1 and will resurface next session.</p>
         ${skipped.length ? `<p class="xs muted mt-2">Skipped ${skipped.length} topic${skipped.length === 1 ? '' : 's'} tied to internals you've already finished:
-          ${skipped.map(t => t.title).join(', ')}. <a href="#/internals" data-link>manage internals →</a></p>` : ''}
+          ${skipped.map(t => t.title).join(', ')}. <a href="/internals" data-link>manage internals →</a></p>` : ''}
       </div>`;
 
-    box.querySelector('#rv-again').addEventListener('click', () => { location.hash = '#/revise'; });
+    box.querySelector('#rv-again').addEventListener('click', () => go('/revise'));
+    box.querySelector('#rv-back-setup')?.addEventListener('click', () => go('/revise'));
     if (pct === 100 && log.length >= 5) toast('Perfect session');
   }
 }

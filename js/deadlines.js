@@ -15,7 +15,8 @@
    Every item is normalised to the same shape:
      { kind, subject, name, code, days, dateText, approx, span, status, href }
    ========================================================================== */
-import { myExternalExams as externalExams, myDerivedExams as derivedExams, subjectById } from './registry.js';
+import { subjectMeta } from './registry.js';
+import { myExternalExams as externalExams, myDerivedExams as derivedExams, plannerItemIsLive } from './assessments.js';
 import { store } from './store.js';
 import { sortByDue, describeDate, daysUntilItem, STATUSES } from '../data/planner.js';
 
@@ -51,13 +52,15 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
   const out = [];
 
   if (kinds.includes('internal')) {
-    /* Anything you have finished is not something you have COMING. Both
-       "submitted" and "graded" mean the work has left your hands, so neither
-       belongs in a forward-looking list. They stay visible on the Assessments
-       page and on the calendar (greyed, as a record of when they were due),
-       just not here and not in the nav badge. */
+    /* Two filters, both from the shared rules in assessments.js:
+         • a finished internal ("submitted" or "graded") has left your hands, so
+           it is not something you have COMING;
+         • an internal whose standard was deleted on Progress is not yours at
+           all any more, and must vanish from here the moment it is removed.
+       Externals are handled separately below and are NEVER filtered out: the
+       exam date stays visible even once the result is in. */
     const done = (i) => i.status === 'submitted' || i.status === 'graded';
-    sortByDue(store.internals().filter(i => !done(i))).forEach(i => {
+    sortByDue(store.internals().filter(i => plannerItemIsLive(i) && !done(i))).forEach(i => {
       const d = describeDate(i);
       const days = daysUntilItem(i);
       if (days === null) return;                    // undated, can't be ranked (see undatedInternals)
@@ -66,7 +69,7 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
         days, dateText: d.text, approx: d.approx, span: d.span,
         status: i.status, statusLabel: (STATUSES[i.status] || {}).label,
         statusColour: (STATUSES[i.status] || {}).colour,
-        href: '#/internals',
+        href: '/internals',
       });
     });
   }
@@ -74,18 +77,18 @@ export function upcomingDeadlines({ kinds = ['internal', 'derived', 'external'],
   if (kinds.includes('derived')) {
     derivedExams().forEach(e => out.push({
       kind: 'derived', subject: e.subject,
-      name: ((subjectById[e.subject] || {}).name || e.subject) + ' derived grade',
+      name: subjectMeta(e.subject).name + ' derived grade',
       code: e.paper, days: daysTo(e.date), dateText: fmt(e.date),
-      approx: false, span: false, href: '#/exams',
+      approx: false, span: false, href: '/exams',
     }));
   }
 
   if (kinds.includes('external')) {
     externalExams().forEach(e => out.push({
       kind: 'external', subject: e.subject,
-      name: ((subjectById[e.subject] || {}).name || e.subject) + ' externals',
+      name: subjectMeta(e.subject).name + ' externals',
       code: e.standards, days: daysTo(e.date), dateText: fmt(e.date),
-      approx: false, span: false, href: '#/exams',
+      approx: false, span: false, href: '/exams',
     }));
   }
 

@@ -16,10 +16,10 @@
    across the days they span. Undated internals can't be placed, so they are
    listed underneath rather than silently dropped.
    ========================================================================== */
-import { subjectById, subjectMeta } from '../registry.js';
+import { subjectMeta } from '../registry.js';
 import { store } from '../store.js';
 import { undatedInternals, KINDS } from '../deadlines.js';
-import { myExternalExams as externalExams, myDerivedExams as derivedExams } from '../registry.js';
+import { myExternalExams as externalExams, myDerivedExams as derivedExams, plannerItemIsLive } from '../assessments.js';
 import { esc } from '../ui.js';
 import { pageHead, sectionTabs } from './common.js';
 import { STATUSES, roughToDate, HOLIDAYS_2026, studyLeave } from '../../data/planner.js';
@@ -42,13 +42,13 @@ function allEvents() {
   /* Finished internals stay on the grid as history (they are drawn muted via
      `done`), but they must never drive "what's coming", the nav badge or the
      next-up tile. That filtering lives in deadlines.js. */
-  store.internals().forEach(i => {
+  store.internals().filter(plannerItemIsLive).forEach(i => {
     const st = STATUSES[i.status] || STATUSES.notstarted;
     const base = { kind: 'internal', subject: i.subject, title: i.title,
                    code: i.code, label: i.code || i.title, status: i.status,
                    statusLabel: st.label,
                    done: i.status === 'submitted' || i.status === 'graded',
-                   href: '#/internals' };
+                   href: '/internals' };
     if (i.dateMode === 'exact' && i.date) out.push({ ...base, start: i.date, end: i.date });
     else if (i.dateMode === 'range' && i.startDate) {
       out.push({ ...base, start: i.startDate, end: i.endDate || i.startDate, span: true });
@@ -62,24 +62,24 @@ function allEvents() {
   /* Exams use the SHORT subject name in the cell (a whole AS list will never
      fit in a 40px box) and keep the full detail in the hover title. */
   derivedExams().forEach(e => {
-    const s = subjectById[e.subject] || {};
+    const s = subjectMeta(e.subject);
     out.push({
       kind: 'derived', subject: e.subject,
       title: `${s.name || e.subject} derived grade`, code: e.paper,
       label: s.short || s.name || e.subject,
       start: e.date.slice(0, 10), end: e.date.slice(0, 10),
-      time: e.date.slice(11, 16), href: '#/exams',
+      time: e.date.slice(11, 16), href: '/exams',
     });
   });
 
   externalExams().forEach(e => {
-    const s = subjectById[e.subject] || {};
+    const s = subjectMeta(e.subject);
     out.push({
       kind: 'external', subject: e.subject,
       title: `${s.name || e.subject} external`, code: e.standards,
       label: s.short || s.name || e.subject,
       start: e.date.slice(0, 10), end: e.date.slice(0, 10),
-      time: e.date.slice(11, 16), href: '#/exams',
+      time: e.date.slice(11, 16), href: '/exams',
     });
   });
 
@@ -290,7 +290,7 @@ export function renderCalendar() {
            <div class="es-icon">📆</div>
            <h3>Nothing to show yet</h3>
            <p>Add your internals with dates and they'll appear here alongside the exam timetables.</p>
-           <a class="btn btn-primary" href="#/internals" data-link>Add internals →</a>
+           <a class="btn btn-primary" href="/internals" data-link>Add internals →</a>
          </div>`}
 
     ${undated.length ? `
@@ -299,7 +299,7 @@ export function renderCalendar() {
         <div class="co-body">
           <h4>${undated.length} internal${undated.length === 1 ? '' : 's'} not on the calendar</h4>
           <div>${undated.map(i => `<strong>${esc(i.code || i.title)}</strong>`).join(', ')}, ${undated.length === 1 ? 'it has' : 'they have'} no date set, so ${undated.length === 1 ? 'it' : 'they'}
-            can't be placed. <a href="#/internals" data-link>Add ${undated.length === 1 ? 'a date' : 'dates'} →</a></div>
+            can't be placed. <a href="/internals" data-link>Add ${undated.length === 1 ? 'a date' : 'dates'} →</a></div>
         </div>
       </div>` : ''}
 

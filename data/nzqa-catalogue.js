@@ -341,14 +341,6 @@ export const catalogue = [
       { code: '3.15', as: '91587', title: 'Apply systems of simultaneous equations in solving problems', credits: 3, assess: 'Internal' },
     ],
   },
-  {
-    id: 'english-extra', name: 'English: other standards', group: '13ENG', icon: '📖', area: 'English',
-    standards: [
-      { code: '3.5', as: '91476', title: 'Create and deliver a fluent and coherent oral text which develops, sustains, and structures ideas', credits: 3, assess: 'Internal' },
-      { code: '3.6', as: '91477', title: 'Create a fluent and coherent visual text which develops, sustains, and structures ideas using verbal and visual features', credits: 3, assess: 'Internal' },
-      { code: '3.8', as: '91479', title: 'Develop an informed understanding of literature and/or language using critical texts', credits: 4, assess: 'Internal' },
-    ],
-  },
 ];
 
 /** Flat list of every catalogue standard, tagged with its subject. */

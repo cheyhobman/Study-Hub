@@ -10,6 +10,7 @@
 import { subjects, allStandards, standardByTopicId, subjectById } from '../data/subjects.js';
 import { exams, externalExams, derivedExams } from '../data/exams.js';
 import { results } from '../data/results.js';
+import { catalogue } from '../data/nzqa-catalogue.js';
 import { stripHtml } from './ui.js';
 import { store } from './store.js';
 
@@ -48,47 +49,10 @@ export const enrolledStandards = (() => {
    they can never disagree with each other. */
 const enrolledIds = new Set(enrolledSubjects.map(s => s.id));
 
-/* An exam sitting only exists if the student still has an EXTERNAL standard in
-   that subject that they have not removed and have not already passed.
-   ---------------------------------------------------------------------------
-   These used to be plain arrays filtered once at module load against the
-   enrolled list, which made them wrong in three ways: deleting every external
-   for a subject on the Progress page left its exam sitting on the calendar,
-   a subject added from the catalogue never gained one, and an external already
-   passed in a previous year still counted down as if it were coming.
-
-   They are FUNCTIONS now because hidden standards live in localStorage and can
-   change at any moment: a value captured at import time cannot follow them. */
-function sittingSubjects() {
-  const hidden = new Set(store.hiddenStandards());
-  const record = [...results, ...store.extraStandards()];
-  const live = new Set();
-  record.forEach(r => {
-    if (String(r.assess || '').toLowerCase() !== 'external') return;
-    if (hidden.has(`${r.group}:${r.code}`)) return;   // removed on Progress
-    if (r.status === 'achieved') return;              // already sat and passed
-    const sub = groupForSubjectReverse(r.group) || (r.subject || '').trim().toLowerCase();
-    if (sub) live.add(sub);
-  });
-  return live;
-}
-
-/* group code ("13CHE") back to a subject id ("chemistry"). */
-const SUBJECT_OF_GROUP = { '13CHE': 'chemistry', '13PHY': 'physics', '13MAC': 'calculus',
-                           '13MAT': 'calculus', '13MAS': 'statistics', '13BIO': 'biology',
-                           '13ENU': 'english', '13ENG': 'english' };
-function groupForSubjectReverse(group) { return SUBJECT_OF_GROUP[group] || null; }
-
-export function myExternalExams() {
-  const live = sittingSubjects();
-  return externalExams.filter(e => live.has(e.subject));
-}
-export function myDerivedExams() {
-  /* A derived-grade exam is a fallback sitting for the SAME externals, so it
-     follows exactly the same rule. No externals left, no derived exam. */
-  const live = sittingSubjects();
-  return derivedExams.filter(e => live.has(e.subject));
-}
+/* Exam sittings are derived in js/assessments.js, the single source of truth
+   for every assessment view. Re-exported here so existing imports keep working
+   and there is still only ONE implementation. */
+export { myExternalExams, myDerivedExams } from './assessments.js';
 
 /* topicId prefix -> subject id (lets us resolve content even for extra
    sub-pages that aren't tied to a formal standard). */
@@ -142,7 +106,7 @@ export async function buildSearchIndex() {
   subjects.forEach(s => {
     idx.push({
       kind: 'Subject', title: s.name, sub: s.level,
-      url: `#/subject/${s.id}`, subjectId: s.id,
+      url: `/subject/${s.id}`, subjectId: s.id,
       text: `${s.name} ${s.blurb} ${s.level}`.toLowerCase(),
     });
   });
@@ -177,7 +141,7 @@ export async function buildSearchIndex() {
       kind: std.subjectName,
       title: std.title,
       sub: `${std.code} · ${std.credits ? std.credits + ' credits · ' : ''}${std.type}`,
-      url: `#/topic/${std.topicId}`,
+      url: `/topic/${std.topicId}`,
       subjectId: std.subjectId,
       text: `${std.title} ${std.code} ${std.blurb} ${body}`.toLowerCase(),
     });
@@ -202,7 +166,7 @@ export async function buildSearchIndex() {
       }
       idx.push({
         kind: `${s.name} · Study guide`, title: g.title, sub: g.blurb || 'Deep-dive guide',
-        url: `#/topic/${g.topicId}`, subjectId: s.id,
+        url: `/topic/${g.topicId}`, subjectId: s.id,
         text: `${g.title} ${g.blurb || ''} ${body}`.toLowerCase(),
       });
     });
@@ -218,7 +182,7 @@ export async function buildSearchIndex() {
       const anchor = String(sec.id || sec.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       idx.push({
         kind: `${std.subjectName} · ${std.code}`, title: sec.title,
-        sub: `Section of ${std.title}`, url: `#/topic/${std.topicId}#${anchor}`,
+        sub: `Section of ${std.title}`, url: `/topic/${std.topicId}#${anchor}`,
         subjectId: std.subjectId, isSection: true,
         text: `${sec.title} ${stripHtml(sec.intro || '')} ${std.title}`.toLowerCase(),
       });
@@ -229,28 +193,28 @@ export async function buildSearchIndex() {
   subjects.forEach(s => {
     idx.push({
       kind: 'Reference', title: `${s.name} formula & quick-reference sheet`,
-      sub: 'Printable reference', url: `#/reference/${s.id}`, subjectId: s.id,
+      sub: 'Printable reference', url: `/reference/${s.id}`, subjectId: s.id,
       text: `${s.name} formula sheet quick reference printable equations`.toLowerCase(),
     });
     idx.push({
       kind: 'Flashcards', title: `Print ${s.name} flashcards`,
-      sub: 'Double-sided printable cards', url: `#/printcards/${s.id}`, subjectId: s.id,
+      sub: 'Double-sided printable cards', url: `/printcards/${s.id}`, subjectId: s.id,
       text: `print ${s.name} flashcards double sided cards revision`.toLowerCase(),
     });
   });
 
   // Static / utility pages: previously missing entirely from search
   [
-    { title: 'Progress & credits', url: '#/progress', kind: 'Tracker',
+    { title: 'Progress & credits', url: '/progress', kind: 'Tracker',
       sub: 'Credits, grades, rank score & ATAR',
       text: 'progress credits rank score atar goal endorsement excellence merit university entrance ue record of learning tracker' },
-    { title: 'Exams timetable', url: '#/exams', kind: 'Timetable',
+    { title: 'Exams timetable', url: '/exams', kind: 'Timetable',
       sub: 'External exams & derived-grade trials',
       text: 'exams timetable exam dates external derived grade trials november september countdown' },
-    { title: 'NZQA command words', url: '#/command-words', kind: 'Study skills',
+    { title: 'NZQA command words', url: '/command-words', kind: 'Study skills',
       sub: 'Describe vs explain vs evaluate',
       text: 'command words describe explain discuss evaluate justify analyse compare assess identify state elaborate' },
-    { title: 'Flagged for review', url: '#/flagged', kind: 'Dashboard',
+    { title: 'Flagged for review', url: '/flagged', kind: 'Dashboard',
       sub: 'Everything you marked as needing work',
       text: 'flagged review weak topics needs work' },
   ].forEach(p => idx.push({ ...p, subjectId: null, text: p.text.toLowerCase() }));
@@ -316,18 +280,37 @@ export async function search(query, limit = 12) {
    and falling back to one shared accent, this gives added subjects a stable,
    distinct colour derived from their group code, so two added subjects never
    look like the same thing on the calendar. */
+/* Catalogue subjects, keyed by the same subject id data/exams.js uses. Without
+   this, anything added from the catalogue fell through to the raw id: the exam
+   timetable read "economics externals", and cryptic ids like "aghort", "dvc"
+   and "temaori" showed up verbatim instead of their real names. */
+const catalogueById = Object.fromEntries(catalogue.map(c => [c.id, c]));
+
+/* A readable short label. "Agricultural & Horticultural Science" cannot fit in
+   a 40px calendar cell, so take the first word unless it is a bare initialism. */
+function shortLabel(name) {
+  const first = String(name).split(/[\s&]+/)[0];
+  return first.length <= 3 ? name.slice(0, 12) : first;
+}
+
 export function subjectMeta(id) {
   if (!id) return { name: '', short: '', dot: 'var(--accent)', icon: '📘' };
   const known = subjectById[id];
   if (known) return known;
 
   const group = String(id).startsWith('x:') ? String(id).slice(2) : String(id);
+
+  /* A catalogue subject: use its real, properly capitalised name. Colour still
+     comes from the hash below so it reads as "not one of the six taught ones". */
+  const cat = catalogueById[group];
   // Deterministic hue from the group code, kept out of the phthalo band (90–160°)
   // so added subjects read as "not one of the six taught ones".
   let h = 0;
   for (let i = 0; i < group.length; i++) h = (h * 31 + group.charCodeAt(i)) % 360;
   if (h >= 90 && h <= 160) h = (h + 140) % 360;
-  return { name: group, short: group, icon: '📘', dot: `hsl(${h} 45% 45%)` };
+  const dot = `hsl(${h} 45% 45%)`;
+  if (cat) return { name: cat.name, short: shortLabel(cat.name), icon: cat.icon || '📘', dot };
+  return { name: group, short: group, icon: '📘', dot };
 }
 
 /* ---- Subjects actually shown, after the student's own removals -------------

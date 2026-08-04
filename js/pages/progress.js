@@ -580,14 +580,25 @@ export function renderProgress() {
   /* editable table, grouped */
   const tableRows = groups.map(g => {
     const gr = rows.filter(r => r.group === g);
-    return `<tr class="tbl-subj"><td colspan="5"><span class="cd-dot" style="background:${GROUP_COLOUR[g] || 'var(--accent)'}"></span> <strong>${g}</strong></td></tr>` +
+    const subjName = (gr[0] && gr[0].subject) || g;
+    return `<tr class="tbl-subj"><td colspan="5">
+        <span class="cd-dot" style="background:${GROUP_COLOUR[g] || 'var(--accent)'}"></span>
+        <strong class="subj-name">${esc(subjName)}</strong>
+        <span class="subj-code mono">${g}</span>
+        <button class="x-btn subj-x" data-remove-subject="${g}"
+                title="Remove ${esc(subjName)} and all ${gr.length} of its standards"
+                aria-label="Remove ${esc(subjName)} and all ${gr.length} of its standards">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+               stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+        </button>
+      </td></tr>` +
       gr.map(r => `<tr data-key="${keyOf(r)}">
         <td class="nowrap"><span class="mono xs">${r.subject} ${r.code}</span>
           <br><span class="badge ${r.assess === 'External' ? 'badge-ext' : 'badge-int'}" style="font-size:.62rem;padding:1px 7px">${r.assess || '–'}</span>
           ${r.as ? `<br><span class="xs muted">AS ${r.as}</span>` : ''}</td>
         <td>${r.title}
           ${r.resit ? '<br><span class="badge badge-flag">re-sitting Nov 2026 to lift the grade</span>' : ''}
-          ${r.topicId ? `<br><a class="xs" href="#/topic/${r.topicId}" data-link>study this →</a>` : ''}
+          ${r.topicId ? `<br><a class="xs" href="/topic/${r.topicId}" data-link>study this →</a>` : ''}
 </td>
         <td><input class="cr-credits sa-input" type="number" min="0" max="30" value="${r.credits}" aria-label="Credits"></td>
         <td><select class="cr-status sa-input" aria-label="Status" title="${STATUS_HINT[r.status] || ''}">
@@ -604,6 +615,17 @@ export function renderProgress() {
           </button></span></td>
       </tr>`).join('');
   }).join('');
+
+  /* §5 FIRST RUN. Untouched means: nothing graded, nothing added, nothing
+     removed. Showing a full table of blank dropdowns under "0 / 60 banked" and
+     "148 still to sit" is technically correct and reads as a wall of failure.
+     An empty screen should be an invitation, so on a genuinely fresh copy the
+     page collapses to one question and the subject picker. Everything else
+     appears as soon as there is something to put in it. */
+  const untouched = !store.hasPersonalRecord()
+    && Object.keys(store.creditRecords()).length === 0
+    && store.extraStandards().length === 0
+    && store.hiddenStandards().length === 0;
 
   /* Shipped blank; a loaded personal record layers over the top. MERGED, not
      replaced: fixed rules like l3Required (60 credits, an NCEA rule, nobody's
@@ -642,7 +664,9 @@ export function renderProgress() {
       title: 'Progress',
       lede: store.hasPersonalRecord()
         ? 'Seeded from your NZQA Record of Learning. Edit anything below and it saves on this device.'
-        : 'Every credit starts blank. Set each standard\u2019s status and grade below and it saves on this device.',
+        : untouched
+          ? 'Start by choosing your subjects. Everything you record saves on this device only.'
+          : 'Every credit starts blank. Set each standard\u2019s status and grade below and it saves on this device.',
     })}
 
     ${(() => {
@@ -665,7 +689,16 @@ export function renderProgress() {
       </div></div>`;
     })()}
 
-    <!-- Qualification status strip -->
+    ${untouched ? `
+      <div class="card firstrun mb-5">
+        <h2 class="fr-q">Which subjects are you taking?</h2>
+        <p class="muted">Pick them below and every standard comes with it. You can set your
+          grades, add your internals' due dates and remove anything you're not sitting once
+          they're in.</p>
+        <p class="xs muted mt-3">Your credit totals, grade breakdown, rank score and ATAR
+          estimate appear here as soon as there is something to count.</p>
+      </div>
+    ` : `    <!-- Qualification status strip -->
     <div class="stat-row mb-5">
       <div class="stat-tile"><div class="stt-num">${got}<span style="font-size:.5em;color:var(--muted)">/${q.l3Required}</span></div><div class="stt-label">L3 credits banked<br><span class="xs" style="text-transform:none;letter-spacing:0">60 at L3 needed for the certificate</span></div></div>
       <div class="stat-tile" title="${resitCredits ? `Includes ${resitCredits} credits you are resitting. Those exams are still ahead of you, even though the credits are already banked.` : ''}"><div class="stt-num">${coming}</div><div class="stt-label">Credits still to sit${resitCredits ? `<br><span class="xs" style="text-transform:none;letter-spacing:0">includes ${resitCredits} being resat</span>` : ''}</div></div>
@@ -874,6 +907,8 @@ export function renderProgress() {
         <tbody>${tableRows}</tbody>
       </table>
     </div>
+    `}
+
 
     <h2 class="mt-5 mb-3" id="add-standards">Add standards from other subjects</h2>
     <p class="muted small mb-3">This site only teaches six subjects, but your credits, rank score and
@@ -895,28 +930,9 @@ export function renderProgress() {
       <div id="lib-list" class="lib-list"><!-- injected --></div>
     </div>
 
-    <details class="card mb-5">
-      <summary style="cursor:pointer;font-weight:600">Add a standard by hand</summary>
-      <p class="xs muted mt-3">Use this for anything the catalogue doesn't have: unit standards, a
-        subject we've missed, or a standard whose details differ from the list above.</p>
-      <form id="lib-manual" class="int-form" style="box-shadow:none;padding:0;border:0" novalidate>
-        <div class="grid-2">
-          <label class="field"><span>Subject</span><input name="subject" required placeholder="e.g. Psychology"></label>
-          <label class="field"><span>Class code</span><input name="group" required placeholder="e.g. 13PSY"></label>
-          <label class="field"><span>Standard code</span><input name="code" required placeholder="e.g. 3.1"></label>
-          <label class="field"><span>AS number <em class="xs muted">(optional)</em></span><input name="as" placeholder="e.g. 91875"></label>
-          <label class="field"><span>Credits</span><input type="number" name="credits" min="1" max="30" required value="4"></label>
-          <label class="field"><span>Assessment</span>
-            <select name="assess"><option value="Internal">Internal</option><option value="External">External</option></select>
-          </label>
-        </div>
-        <label class="field"><span>Title</span><input name="title" required placeholder="What the standard is called"></label>
-        <div class="flex gap-3 mt-3"><button class="btn btn-primary btn-sm" type="submit">Add standard</button></div>
-      </form>
-    </details>
 
     <div class="flex gap-3 mt-5 wrap">
-      <button class="btn btn-ghost btn-sm" id="reset-credits" title="Also restores any standards you have removed">Reset to my NZQA record</button>
+      <button class="btn btn-ghost btn-sm" id="reset-credits" title="Clears every grade and status you have entered and brings back any standards you removed">Reset to blank</button>
       ${store.extraStandards().length ? `<button class="btn btn-ghost btn-sm" id="clear-extras">Remove all ${store.extraStandards().length} added standards</button>` : ''}
     </div>
   </div>`;
@@ -990,13 +1006,15 @@ export function renderProgress() {
         rerender();
       });
 
+      /* The goal picker, the star and the credit table are all absent on a
+         first run (§5), so every handler below is optional-chained. */
       const gt = document.getElementById('goal-type');
       const tgt = document.getElementById('goal-target');
-      gt.addEventListener('change', () => {
+      gt?.addEventListener('change', () => {
         store.setGoal({ type: gt.value, target: gt.value === 'custom' ? (parseInt(tgt.value, 10) || 60) : null });
         rerender();
       });
-      tgt.addEventListener('change', () => {
+      tgt?.addEventListener('change', () => {
         store.setGoal({ type: 'custom', target: parseInt(tgt.value, 10) || 60 });
         rerender();
       });
@@ -1007,6 +1025,7 @@ export function renderProgress() {
          removes it, which drops Progress back to the Level 3 default. */
       const favBtn = document.getElementById('goal-fav');
       favBtn?.addEventListener('click', () => {
+        if (!gt) return;
         const mine = {
           type: gt.value,
           target: gt.value === 'custom' ? (parseInt(tgt.value, 10) || 60) : null,
@@ -1032,17 +1051,21 @@ export function renderProgress() {
         document.getElementById('reset-credits')?.click();
       });
 
-      document.getElementById('reset-credits').addEventListener('click', () => {
+      document.getElementById('reset-credits')?.addEventListener('click', () => {
+        /* The old label said "reset to my NZQA record", which described the
+           behaviour of an earlier build where results.js shipped with a real
+           record in it. It ships blank now, so this button clears everything,
+           and the wording has to say so or it reads as "restore my results". */
         const hidden = store.hiddenStandards().length;
-        const msg = hidden
-          ? `Discard your edits and reset every row back to your NZQA record? This also brings back the ${hidden} standard${hidden === 1 ? '' : 's'} you removed.`
-          : 'Discard your edits and reset every row back to your NZQA record?';
+        const edits = Object.keys(store.creditRecords()).length;
+        const msg = 'Reset every standard back to blank?\n\n'
+          + `This clears ${edits || 'all'} grade${edits === 1 ? '' : 's'} and status${edits === 1 ? '' : 'es'} you have entered`
+          + (hidden ? `, and brings back the ${hidden} standard${hidden === 1 ? '' : 's'} you removed` : '')
+          + '. Your subjects stay; only the results are cleared. This cannot be undone.';
         if (!confirm(msg)) return;
-        results.forEach(r => store.setCreditRecord(keyOf(r), null));
-        /* Removing a standard is otherwise a one-way door now the restore panel
-           is gone, so the reset button is the way back. */
+        store.clearPersonalRecord();
         store.showAllStandards();
-        toast('Reset to your NZQA record');
+        toast('Reset to blank');
         rerender();
       });
 
@@ -1083,10 +1106,17 @@ export function renderProgress() {
         return Object.values(byGroup);
       })();
 
+      /* Built once per paint, not once per catalogue standard. Rebuilding it
+         inside the loop meant 175 rebuilds of the same ~100-entry Set. */
+      let presentIds = store.presentIdentitySet();
       const isPresent = (sub, st) => store.isStandardPresent({
-        group: sub.group, code: st.code, as: st.as || '', title: st.title });
+        group: sub.group, code: st.code, as: st.as || '', title: st.title }, presentIds);
 
       const paintLib = () => {
+        /* Refreshed per paint: adding or restoring a standard changes what is
+           present, and paintLib is what runs afterwards. Once per paint is the
+           right granularity, once per mount would go stale. */
+        presentIds = store.presentIdentitySet();
         const q = (search.value || '').trim().toLowerCase();
         const a = area.value;
         let subjects = catalogue
@@ -1110,7 +1140,7 @@ export function renderProgress() {
         subjects = subjects.concat(removedMatching);
 
         if (!subjects.length) {
-          list.innerHTML = `<p class="muted small">No subject matches “${esc(q)}”. Use <em>Add a standard by hand</em> below.</p>`;
+          list.innerHTML = `<p class="muted small">No subject matches “${esc(q)}”.</p>`;
           return;
         }
 
@@ -1201,6 +1231,29 @@ export function renderProgress() {
          subject too. Hide every standard in a group and the subject drops out
          of the sidebar and the totals, then reappears at the bottom of the add
          list ready to be restored. Nothing is ever actually deleted. */
+      /* Remove a WHOLE subject. Hiding every one of its standards is exactly
+         what removing them one at a time does, so this inherits the propagation
+         already built for that: the subject leaves the sidebar, the Assessments
+         page, the calendar, What's coming, the exam timetable and every credit
+         total, and comes back from the bottom of the add list. */
+      document.getElementById('credit-table')?.addEventListener('click', (e) => {
+        const sub = e.target.closest('[data-remove-subject]');
+        if (!sub) return;
+        const g = sub.dataset.removeSubject;
+        const mine = rows.filter(r => r.group === g);
+        const name = (mine[0] && mine[0].subject) || g;
+        if (!confirm(`Remove ${name} and all ${mine.length} of its standards?\n\n`
+          + 'Its credits, assessments and exam dates come off every page. You can put it back '
+          + 'from the bottom of the add-a-subject list at any time.')) return;
+        mine.forEach(r => {
+          const k = keyOf(r);
+          store.hideStandard(k);
+          store.setCreditRecord(k, null);
+        });
+        toast(`Removed ${name}`);
+        rerender();
+      });
+
       document.getElementById('credit-table')?.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-remove-std]');
         if (!btn) return;
@@ -1213,29 +1266,6 @@ export function renderProgress() {
       });
 
 
-
-      /* ---- add by hand ---- */
-      document.getElementById('lib-manual')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const f = e.target;
-        const row = {
-          group: f.group.value.trim().toUpperCase() || 'OTHER',
-          subject: f.subject.value.trim(),
-          code: f.code.value.trim(),
-          as: f.as.value.trim(),
-          title: f.title.value.trim(),
-          credits: parseInt(f.credits.value, 10) || 0,
-          assess: f.assess.value,
-          status: f.assess.value === 'External' ? 'external' : 'todo',
-          topicId: null,
-        };
-        if (!row.subject || !row.code || !row.title || !row.credits) {
-          toast('Subject, standard code, title and credits are all needed'); return;
-        }
-        const res = store.addExtraStandard(row);
-        toast(res.ok ? `Added ${row.subject} ${row.code}` : 'You already have a standard with that class code and number');
-        rerender();
-      });
 
       document.getElementById('clear-extras')?.addEventListener('click', () => {
         const n = store.extraStandards().length;

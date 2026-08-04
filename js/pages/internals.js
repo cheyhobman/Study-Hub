@@ -14,6 +14,7 @@ import { store } from '../store.js';
 import { subjects, subjectMeta } from '../registry.js';
 import { results } from '../../data/results.js';
 import { internalsForSubject, outstandingInternals, itemFromCatalogue, plannerStatusFor, creditRecordFor } from '../internals-catalog.js';
+import { plannerItemIsLive } from '../assessments.js';
 import { pageHead, sectionTabs} from './common.js';
 import { toast } from '../ui.js';
 import { TERMS_2026, STATUSES, effectiveDate, describeDate, daysUntilItem, sortByDue } from '../../data/planner.js';
@@ -59,14 +60,17 @@ function itemRow(item) {
         <span class="int-date">${d.span ? '' : ''}${d.text}${d.days > 1 ? ` <span class="xs muted">(${d.days} days)</span>` : ''}</span>
         ${d.approx && d.hint ? `<span class="xs muted"> · ${d.hint}</span>` : ''}
         ${item.credits ? `<span class="xs muted"> · ${item.credits} credits</span>` : ''}
-        ${item.topicId ? ` · <a class="xs" href="#/topic/${item.topicId}" data-link>study →</a>` : ''}
+        ${item.topicId ? ` · <a class="xs" href="/topic/${item.topicId}" data-link>study →</a>` : ''}
       </div>
     </div>
     <span class="int-status" style="background:${st.colour}22;color:${st.colour};border-color:${st.colour}55">${st.label}${item.status === 'graded' && item.grade ? ` · ${item.grade}` : ''}</span>
     ${due}
     <span class="int-actions">
       <button class="btn btn-ghost btn-sm int-edit" data-id="${item.id}" aria-label="Edit ${item.title}">Edit</button>
-      <button class="btn btn-ghost btn-sm int-del" data-id="${item.id}" aria-label="Delete ${item.title}">✕</button>
+      <button class="btn btn-ghost btn-sm x-btn int-del" data-id="${item.id}" aria-label="Delete ${item.title}">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+      </button>
     </span>
   </div>`;
 }
@@ -217,9 +221,31 @@ function formHtml(item) {
 }
 
 /* ---- page --------------------------------------------------------------- */
-export function renderInternals(editId = null) {
-  const items = sortByDue(store.internals());
-  const editing = editId ? items.find(i => i.id === editId) : null;
+/* Keys graded DURING this visit to the page.
+   ---------------------------------------------------------------------------
+   Grading something is supposed to remove it from this page, but removing it
+   from under the cursor the instant the grade is chosen is disorienting: the
+   row you were working in disappears mid-interaction. So a row graded in this
+   session stays put until you leave. Reset on every fresh mount of the page,
+   which is exactly "navigate away or reload". */
+let gradedThisSession = new Set();
+
+export function renderInternals(editId = null, { keepSession = false } = {}) {
+  if (!keepSession) gradedThisSession = new Set();
+
+  /* Planner items whose standard was deleted on Progress are gone from here
+     too. This is the propagation the spec asks for, and it is one filter
+     rather than a cleanup pass, so it can never fall out of step. */
+  const live = sortByDue(store.internals()).filter(plannerItemIsLive);
+
+  /* EXTERNALS ARE NOT LISTED HERE. This page is the internal deadline planner:
+     work you hand in, with dates you set yourself. Externals have a fixed
+     national exam date, are not something you plan, and live on the exam
+     timetable and the calendar instead. Mixing them in buried the eight things
+     a student actually has to action under twenty-odd exam rows. */
+  const items = live.filter(i =>
+    !(i.status === 'graded' && i.grade) || gradedThisSession.has(i.recordKey || i.id));
+  const editing = editId ? live.find(i => i.id === editId) : null;
 
   const outstanding = items.filter(i => i.status !== 'graded');
   /* Only work you still have to hand in can be overdue. Something already
@@ -289,7 +315,7 @@ export function renderInternals(editId = null) {
          editing several internals in a row feel like the page was reloading. */
       const rerender = (edit = null) => {
         const y = window.scrollY;
-        const v = renderInternals(edit);
+        const v = renderInternals(edit, { keepSession: true });
         document.getElementById('content').innerHTML = v.html;
         v.onMount();
         // Opening the form should show the form; everything else holds position.
@@ -420,6 +446,11 @@ export function renderInternals(editId = null) {
           }
           if (item.status === 'graded' && !item.grade) return fail('Add the grade you got, or set the status back to Submitted.');
 
+          /* Graded here and now: keep it on screen until the student leaves,
+             rather than yanking the row they are still looking at. */
+          if (item.status === 'graded' && item.grade && item.recordKey) {
+            gradedThisSession.add(item.recordKey);
+          }
           store.saveInternal(item);
           syncToProgress(item);          // keep the credit tracker in step
           toast(f.get('id') ? 'Internal updated' : 'Internal added');

@@ -146,9 +146,11 @@ export const results = [
     title: 'Respond critically to studied written text(s)', credits: 4, status: 'external', assess: 'External' },
   { group: '13ENU', subject: 'English', code: '3.2', as: '91473', topicId: 'eng-91473',
     title: 'Respond critically to studied visual or oral text(s)', credits: 4, status: 'external', assess: 'External' },
-  /* Unfamiliar texts, on the English programme but NOT being sat this year.
-     Marked 'notassessed' so it appears on the record (and can be switched on
-     later from the Progress page) without its credits counting anywhere. */
+  /* Unfamiliar texts. Part of the standard English programme, so it ships as a
+     normal external like the others. (It used to be marked 'notassessed' here
+     because the original owner of this copy was not sitting it; that is a
+     personal choice, not a default, so it now starts blank like everything
+     else and is dropped from the Progress page by anyone not taking it.) */
   { group: '13ENU', subject: 'English', code: '3.3', as: '91474', topicId: null,
     title: 'Respond critically to unfamiliar written texts through close reading',
     credits: 4, status: 'external', assess: 'External' },
@@ -161,6 +163,21 @@ export const results = [
   { group: '13ENU', subject: 'English', code: '3.9', as: '91480', topicId: 'eng-3-9',
     title: 'Respond critically to visual and/or oral text(s) through close reading',
     credits: 3, status: 'todo', assess: 'Internal' },
+  /* The three remaining English internals. These used to sit in a SEPARATE
+     "English: other standards" entry in the catalogue, which meant English
+     appeared twice in the add list and these had to be added by hand even
+     though nearly every Year 13 English programme includes them. They are part
+     of the default programme now, blank like everything else, and the duplicate
+     catalogue entry has been removed. Anyone not sitting one can delete it. */
+  { group: '13ENU', subject: 'English', code: '3.5', as: '91476', topicId: null,
+    title: 'Create and deliver a fluent and coherent oral text which develops, sustains, and structures ideas',
+    credits: 3, status: 'todo', assess: 'Internal' },
+  { group: '13ENU', subject: 'English', code: '3.6', as: '91477', topicId: null,
+    title: 'Create a fluent and coherent visual text which develops, sustains, and structures ideas using verbal and visual features',
+    credits: 3, status: 'todo', assess: 'Internal' },
+  { group: '13ENU', subject: 'English', code: '3.8', as: '91479', topicId: null,
+    title: 'Develop an informed understanding of literature and/or language using critical texts',
+    credits: 4, status: 'todo', assess: 'Internal' },
 
 ];
 

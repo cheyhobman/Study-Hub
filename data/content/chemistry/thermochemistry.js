@@ -5,7 +5,7 @@
 export default {
   title: 'Thermochemical principles',
   tags: ['Enthalpy', 'Entropy', 'Gibbs', 'Hess’s law'],
-  intro: 'Energy changes in reactions: how much heat is released or absorbed (enthalpy, ΔH), how disorder changes (entropy, ΔS), and how the two combine to decide whether a reaction happens on its own (Gibbs free energy, ΔG). The feasibility idea returns in <a href="#/topic/chem-91392" data-link>Aqueous equilibria →</a> and <a href="#/topic/chem-91393" data-link>Redox →</a>.',
+  intro: 'Energy changes in reactions: how much heat is released or absorbed (enthalpy, ΔH), how disorder changes (entropy, ΔS), and how the two combine to decide whether a reaction happens on its own (Gibbs free energy, ΔG). The feasibility idea returns in <a href="/topic/chem-91392" data-link>Aqueous equilibria →</a> and <a href="/topic/chem-91393" data-link>Redox →</a>.',
 
   flashcards: [
     { q: 'Define standard enthalpy of formation', a: 'The enthalpy change when ONE mole of a compound forms from its elements in their standard states', explain: 'Under standard conditions (100 kPa, stated temperature). By definition it is zero for an element in its standard state.' },

@@ -93,3 +93,33 @@ in these files. That means:
 The only personal information in the repo itself is the four data files listed
 in [SETUP.md](SETUP.md) — chiefly `data/results.js`, which is why the repo should
 be private.
+
+---
+
+## 3. Clean URLs (no `#`)
+
+Routing is **history-based**, so pages are real paths: `studyhubnz.com/progress`,
+not `studyhubnz.com/#/progress`.
+
+That means the host has to serve `index.html` for any path that is not a real
+file, or a cold load of `/progress` 404s. Config for all three common hosts
+ships in this repo:
+
+| Host | File | What it does |
+|---|---|---|
+| **Vercel** (what you're using) | `vercel.json` | `rewrites` sends every non-asset path to `/index.html` |
+| Netlify | `_redirects` | `/*  /index.html  200` |
+| GitHub Pages | `404.html` | a copy of `index.html`; Pages serves it for unknown paths |
+
+Old `#/...` links still work: the router rewrites them to the clean path once,
+in place, so nothing bookmarked or shared breaks.
+
+⚠️ **GitHub Pages project sites are a special case.** At
+`username.github.io/Repo/` the app is not at the domain root, so the
+root-absolute links (`/progress`) point at the wrong place. Use a custom domain
+(studyhubnz.com) or a user/org root repo. Vercel with the custom domain is the
+intended setup and has no such problem.
+
+⚠️ **If the deployed site shows a Vercel login page**, Deployment Protection is
+on. Vercel dashboard → project → Settings → Deployment Protection → Vercel
+Authentication → **Disabled**.

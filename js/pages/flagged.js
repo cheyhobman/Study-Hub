@@ -36,7 +36,7 @@ export function renderFlagged() {
               return `<div class="std-row" style="cursor:default">
                 <span class="std-code">${std ? std.code : '–'}</span>
                 ${store.isAutoFlagged(id) ? '<span class="auto-badge" title="Flagged automatically because your quiz average on this topic is below 50%">auto</span>' : ''}
-                <a class="std-main" href="#/topic/${id}" data-link style="text-decoration:none;color:inherit">
+                <a class="std-main" href="/topic/${id}" data-link style="text-decoration:none;color:inherit">
                   <span class="std-title">${title}</span>
                   <span class="std-blurb">${std ? std.blurb : ''}</span>
                 </a>
