@@ -380,112 +380,223 @@ minute. If it does not, check spam.
 
 ## 5. Google sign-in — OPTIONAL, SKIP IF YOU LIKE
 
-**You do not need this.** Email accounts already work after step 4. This only
-adds the "Continue with Google" button. Until you do it, that button shows an
-error; everything else is unaffected.
+### Read this first
 
-It is the longest step because it involves a second company. Come back to it
-another day if you want.
+**You do not need this step.** After step 4, email sign-up and log in work
+completely. All step 5 adds is the "Continue with Google" button. Until you do
+it, that one button shows an error and nothing else is affected.
 
-**What is actually happening:** Google will not let an unknown website ask for
-someone's Google account. You register your site with Google, Google gives you
-two strings (an ID and a secret), and you hand those to Supabase. Supabase then
-talks to Google on your behalf.
+It is the longest and fiddliest step because it involves a second company with
+its own dashboard. **If you are tired of setup, stop here** — the site is fully
+working. Come back another day.
+
+### What is actually happening
+
+Google will not let an unknown website ask for someone's Google account. So:
+
+1. You register your site with Google.
+2. Google gives you two strings: a **Client ID** and a **Client secret**.
+3. You paste those into Supabase.
+4. From then on, Supabase does the talking to Google. Your site never handles
+   any of it.
+
+### Navigating Google Cloud
+
+Same trick as Supabase: **use direct links, do not hunt for menus.**
+
+⚠️ Google reorganised this area during 2025–26 into something called the
+**Google Auth Platform**, with four pages: Branding, Audience, Data Access and
+Clients. Older tutorials describe an "OAuth consent screen" wizard that no
+longer looks the same. These links go to the current pages:
+
+| Page | Link |
+|---|---|
+| Branding (app name) | <https://console.cloud.google.com/auth/branding> |
+| Audience (who can sign in) | <https://console.cloud.google.com/auth/audience> |
+| Data Access (scopes) | <https://console.cloud.google.com/auth/scopes> |
+| Clients (the ID and secret) | <https://console.cloud.google.com/auth/clients> |
+
+---
 
 ### 5a. Make a Google Cloud project
 
 **Go to:** <https://console.cloud.google.com> and sign in with your normal
-Google account.
+personal Google account. You do not need a separate one.
 
-1. At the very top of the page, to the right of the "Google Cloud" logo, there
-   is a **project dropdown** — it might say "Select a project".
-2. Click it → a dialog opens → **New Project** (top right of that dialog).
-3. **Project name:** `Study Hub`. Leave Location as "No organisation".
-4. **Create**. Wait ~10 seconds.
-5. Click the project dropdown again and **select `Study Hub`**. Everything below
-   must happen inside this project — check the dropdown says "Study Hub" before
-   continuing.
+1. At the very top of the page, just right of the "Google Cloud" logo, there is
+   a **project dropdown**. It may say "Select a project".
+2. Click it. A dialog opens. Click **New Project** (top right of the dialog).
+3. **Project name:** `Study Hub`. Leave "Location" as *No organisation*.
+4. Click **Create** and wait about 10 seconds.
+5. **Click the project dropdown again and select `Study Hub`.**
 
-### 5b. Fill in the consent screen
+> ⚠️ Everything below must happen inside this project. Before each of the next
+> steps, glance at the dropdown and check it says **Study Hub**. If you set
+> things up in the wrong project, nothing errors — it just silently does not
+> work.
 
-This is the "Study Hub wants to access your Google Account" box people see.
-Google will not give you credentials until it exists.
+If it asks you to enable billing at any point: **you do not need to.** Sign-in
+is free. Close the prompt.
 
-**Go to:** left menu (the ☰ hamburger, top left) → **APIs & Services** →
-**OAuth consent screen**.
+---
 
-1. **User Type: External** → **Create**.
-   (Internal only exists if you have a Google Workspace organisation.)
-2. **App information:**
+### 5b. Branding — name your app
+
+**Go to:** <https://console.cloud.google.com/auth/branding>
+
+This is the "Study Hub wants to access your Google Account" box people will see.
+
+**If this is the first time**, you will get a **Get started** button and a short
+wizard. Work through it:
+
+1. **App Information**
    - **App name:** `Study Hub`
-   - **User support email:** pick your own email from the dropdown
-   - **Developer contact information → Email addresses:** your own email again
+   - **User support email:** choose your own address from the dropdown
+   - → **Next**
+2. **Audience**
+   - Choose **External**.
 
-   Everything else on this page is optional. Leave logo, domain and links blank.
-   → **Save and Continue**
+   > **External** = any Google account can use it (subject to the test-user list
+   > in 5c). **Internal** only exists if you have a Google Workspace
+   > organisation, and will be greyed out for a personal account. Pick External.
+   - → **Next**
+3. **Contact Information**
+   - **Email addresses:** your own address again. This is where Google emails
+     you about the project.
+   - → **Next**
+4. **Finish** — tick the agreement box → **Create**.
 
-3. **Scopes** page → **Add or Remove Scopes** → a panel slides out with a long
-   list. Tick these two:
-   - `.../auth/userinfo.email` — described as "See your primary email address"
-   - `.../auth/userinfo.profile` — described as "See your personal info"
+**If the wizard does not appear** and you land straight on a Branding form, just
+fill in App name and User support email and click **Save**.
 
-   → **Update** → **Save and Continue**
+Everything else on this page — logo, app domain, privacy policy link — is
+optional. Leave it blank.
 
-4. **Test users** page → **+ Add Users** → type your own Gmail address →
-   **Add** → **Save and Continue**.
-5. **Summary** page → **Back to Dashboard**.
+---
 
-> **Leave the app in "Testing" mode.** You will see a "Publish App" button —
-> ignore it. Publishing sends your site for Google review, which takes days and
-> is only needed if strangers will sign in. In Testing, the Gmail addresses on
-> your test-user list work fine, which is all you need.
+### 5c. Audience — add yourself as a test user
 
-### 5c. Create the credentials
+**Go to:** <https://console.cloud.google.com/auth/audience>
 
-**Go to:** left menu → **APIs & Services** → **Credentials**.
+**What you will see:** a **Publishing status** section saying **Testing**, and
+below it a **Test users** section.
 
-1. **+ Create Credentials** (near the top) → **OAuth client ID**.
-2. **Application type:** **Web application**.
-3. **Name:** `Study Hub Web` (only you see this).
-4. **Authorised JavaScript origins** → **+ Add URI**, twice:
+1. Leave **Publishing status** as **Testing**.
+
+   > There is a **Publish app** button. **Do not press it.** Publishing sends
+   > your site to Google for review, which takes days and is only needed if
+   > strangers will sign in. In Testing mode, up to 100 Google accounts that you
+   > list below can sign in perfectly normally.
+
+2. Under **Test users**, click **+ Add users**.
+3. Type your own Gmail address. Add any friends who will test it too, one per
+   line.
+4. Click **Save**.
+
+> ⚠️ **If an address is not on this list, Google will refuse to sign them in**
+> with an "app has not been verified" or "access blocked" message. This is the
+> second most common thing to trip over.
+
+---
+
+### 5d. Data Access — what you are asking for
+
+**Go to:** <https://console.cloud.google.com/auth/scopes>
+
+**Scopes** are the specific pieces of information you are asking Google for. You
+want the two most basic ones — the person's email and their name.
+
+1. Click **Add or remove scopes**. A panel slides out from the right with a long
+   filterable table.
+2. Tick these two:
+
+   | Scope | Description shown |
+   |---|---|
+   | `.../auth/userinfo.email` | See your primary Google Account email address |
+   | `.../auth/userinfo.profile` | See your personal info, including any personal info you've made publicly available |
+
+   You may also see `openid` already ticked. Leave it ticked.
+3. Click **Update** at the bottom of the panel.
+4. Click **Save** on the main page.
+
+> These are the two least sensitive scopes Google offers. They do not give
+> access to Gmail, Drive, Contacts or anything else, and because they are
+> "non-sensitive" they do not trigger a Google review.
+
+---
+
+### 5e. Clients — get your ID and secret
+
+**Go to:** <https://console.cloud.google.com/auth/clients>
+
+1. Click **+ Create client** (or **Create credentials → OAuth client ID** if you
+   are on the older page).
+2. **Application type:** select **Web application** from the dropdown.
+3. **Name:** `Study Hub Web`. Only you ever see this.
+4. **Authorised JavaScript origins** → click **+ Add URI** twice and add:
    ```
    https://studyhubnz.com
    http://localhost:8765
    ```
-5. **Authorised redirect URIs** → **+ Add URI**. **Add exactly one**:
+   These are the addresses your site is served from. No trailing slash, no path.
+
+5. **Authorised redirect URIs** → click **+ Add URI**. **Add exactly one:**
    ```
    https://YOURREF.supabase.co/auth/v1/callback
    ```
 
-   > ⚠️ **Read this bit twice.** That URL points at **Supabase**, not at your
-   > own website. Google sends the person to Supabase, and Supabase sends them
-   > on to you. Putting `studyhubnz.com` here is the single most common mistake
-   > and produces an error called `redirect_uri_mismatch`.
+   > 🚨 **This is the single most common mistake in the whole setup.**
    >
-   > `YOURREF` is the same string from your Supabase address bar. If you would
-   > rather copy it exactly, open the Supabase Google page in 5d first — it
-   > displays the precise URL for you to copy.
+   > That URL points at **Supabase**, NOT at your own website. The sequence is:
+   > your site → Google → **Supabase** → your site. Google needs to send the
+   > person back to Supabase, because Supabase is what completes the sign-in.
+   >
+   > Putting `https://studyhubnz.com/...` here gives you an error called
+   > `redirect_uri_mismatch` and nothing will work.
+   >
+   > **Do not type it from memory.** Open step 5f in another tab first: Supabase
+   > displays the exact URL for you to copy. One wrong character breaks it.
 
-6. **Create**. A dialog appears showing **Client ID** and **Client secret**.
-   Leave it open, or copy both into a scratch note for the next minute.
+6. Click **Create**.
+7. A dialog appears titled **OAuth client created**, showing **Client ID** and
+   **Client secret**. **Leave this open**, or copy both somewhere for the next
+   minute.
 
-### 5d. Hand them to Supabase
+   If you close it by accident: you can reopen the client from the Clients list
+   and copy the ID, and reset the secret if needed.
+
+---
+
+### 5f. Paste them into Supabase
 
 **Go to:** `https://supabase.com/dashboard/project/YOURREF/auth/providers`
 
-1. Scroll down the provider list to **Google** and click it to expand.
+1. Scroll the provider list down to **Google**. Click the row to expand it.
 2. Turn on **Enable Sign in with Google**.
-3. **Client IDs** — paste the Client ID from 5c.
-4. **Client Secret (for OAuth)** — paste the Client secret from 5c.
-5. **Save**.
+3. **Client IDs** — paste the Client ID from 5e.
+4. **Client Secret (for OAuth)** — paste the Client secret from 5e.
+5. Notice the **Callback URL (for OAuth)** shown on this same page. That is the
+   exact string 5e wanted. **Compare it against what you typed in 5e now** — if
+   they differ by even one character, go back and fix 5e.
+6. Click **Save**.
 
-Also on that page you will see the **Callback URL (for OAuth)** — that is the
-exact string step 5c wanted. If you guessed it earlier, compare them now and fix
-5c if they differ by even one character.
+> The Google client secret lives in Supabase, never in your repository. That is
+> correct and deliberate: Supabase performs the token exchange on its own
+> servers, which is exactly what a secret is for. Nothing about step 5 goes into
+> your code — you do not edit any file for this step.
 
-> The Google client secret lives in Supabase and never in your repository. That
-> is correct: Supabase does the token exchange on its own servers, which is what
-> a secret is for.
+---
+
+### 5g. Test it
+
+1. Reload your site.
+2. Click **Log in** or **Sign up**.
+3. Click **Continue with Google**.
+4. You should be sent to a Google account chooser, then straight back to your
+   site, logged in.
+
+If you get an error, check the troubleshooting table at the bottom — the two
+Google rows cover almost every case.
 
 ---
 
@@ -561,7 +672,9 @@ the same data, RLS is not on — go back to step 3c.
 | "Accounts are not set up on this copy of the site" | Same as the first row |
 | Email never arrives | **Confirm email** off in 4a, or you hit the hourly limit. Check spam first |
 | Email link errors or lands somewhere odd | A redirect URL is missing from 4b |
-| Google: `redirect_uri_mismatch` | 5c's redirect URI must be the **Supabase** callback, not your own domain |
-| Google: "app has not been verified" / blocked | The Gmail you are using is not on the test-user list from 5b |
+| Google: `redirect_uri_mismatch` | **5e**'s redirect URI must be the **Supabase** callback (`https://YOURREF.supabase.co/auth/v1/callback`), not your own domain. Copy it from the Supabase Google page rather than typing it |
+| Google: "app has not been verified" / "access blocked" | The Gmail you are signing in with is not on the test-user list. Add it at <https://console.cloud.google.com/auth/audience> |
+| Google: "the OAuth client was not found" | Client ID pasted wrong, or you built it in a different Google Cloud project than the one selected |
+| Google button does nothing at all | Google not enabled in Supabase (5f), or you skipped step 5 entirely — which is fine |
 | Logs in fine but results never sync | RLS policies missing. Re-run step 3, then the check in 3c |
 | Slow on the first visit after a week away | Free project waking from pause. A few seconds, once |
