@@ -26,7 +26,9 @@
 import { store } from '../store.js';
 import { authConfigured } from '../auth/config.js';
 import { signedIn, user, displayName, updateProfile, updatePassword,
-         passwordChecks, passwordOk, logOut, syncStatus, onSync } from '../auth/session.js';
+         passwordChecks, passwordOk, logOut, syncStatus, onSync,
+         deviceLabel, deleteAccountData, deviceColumnPresent } from '../auth/session.js';
+import { confirmAction } from '../confirm.js';
 import { pageHead } from './common.js';
 import { toast, esc } from '../ui.js';
 
@@ -126,6 +128,32 @@ export function renderAccount() {
             automatically, a second or two after each change. There is nothing to press.</p>
         </form>
 
+        <div class="card mb-5">
+          <h3 class="mb-2">Devices &amp; syncing</h3>
+          <p class="muted small">You are on <strong>${esc(deviceLabel())}</strong>. Changes save to
+            your account a second or two after you make them, from whichever device you are using.</p>
+          ${deviceColumnPresent() ? '' : `
+            <p class="xs muted mt-2">Your database does not have the optional
+              <code>device_label</code> column yet, so syncs are not labelled with the device they
+              came from. Everything else works normally: see <code>SETUP-AUTH.md</code> step 3.</p>`}
+          ${(() => {
+            const c = store.conflictCopy();
+            if (!c) return '';
+            const when = new Date(c.savedAt).toLocaleString('en-NZ',
+              { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            return `<div class="callout callout-warn mt-3"><div class="co-icon">!</div><div class="co-body">
+              <h4>An older copy was replaced</h4>
+              <p class="small">When you logged in, your account held newer work than this browser did,
+                so the account's copy was loaded. The copy that was here — last changed on
+                <strong>${esc(c.device)}</strong>, ${esc(when)} — was kept rather than thrown away.</p>
+              <div class="flex gap-3 mt-3 wrap">
+                <button class="btn btn-ghost btn-sm" id="acct-conflict-dl">Download the replaced copy</button>
+                <button class="btn btn-ghost btn-sm" id="acct-conflict-dismiss">Discard it</button>
+              </div>
+            </div></div>`;
+          })()}
+        </div>
+
         <form class="card mb-5" id="acct-pw" novalidate>
           <h3 class="mb-3">Change password</h3>
           <label class="field"><span>New password</span>
@@ -135,7 +163,17 @@ export function renderAccount() {
           </ul>
           <p class="int-error hidden" id="acct-pw-err" role="alert"></p>
           <button class="btn btn-primary btn-sm" type="submit">Update password</button>
-        </form>`;
+        </form>
+
+        <div class="card mb-5 danger-zone">
+          <h3 class="mb-2">Delete your account data</h3>
+          <p class="muted small">Removes everything stored in your account: results, subjects,
+            assessments and settings. It does <strong>not</strong> touch the copy saved in this
+            browser, so the site keeps working here.</p>
+          <p class="xs muted mt-2">Take a backup first if there is anything you want to keep.
+            This cannot be undone.</p>
+          <button class="btn btn-danger btn-sm mt-3" id="acct-delete">Delete my account data</button>
+        </div>`;
     })()}
 
     <div class="card">
@@ -199,6 +237,40 @@ export function renderAccount() {
       document.getElementById('acct-logout')?.addEventListener('click', async () => {
         await logOut();
         toast('Logged out. Your work stays on this device.');
+        rerender();
+      });
+
+      document.getElementById('acct-conflict-dl')?.addEventListener('click', () => {
+        const c = store.conflictCopy();
+        if (!c) return;
+        const blob = new Blob([JSON.stringify(
+          { app:'ncea-study-hub', version:2, exportedAt:c.savedAt, data:c.data }, null, 2)],
+          { type:'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `study-hub-replaced-copy-${c.savedAt.slice(0,10)}.json`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+        toast('Downloaded. Restore it from Study tools if you want it back.');
+      });
+      document.getElementById('acct-conflict-dismiss')?.addEventListener('click', () => {
+        store.clearConflictCopy();
+        rerender();
+      });
+
+      document.getElementById('acct-delete')?.addEventListener('click', async () => {
+        if (!await confirmAction({
+          title: 'Delete your account data?',
+          body: `<p>Everything stored in your account is removed: results, subjects, assessments
+                 and settings.</p>
+                 <p>The copy in <strong>this browser</strong> is left alone, so the site keeps
+                 working here.</p>
+                 <p class="xs muted">This cannot be undone.</p>`,
+          confirmLabel: 'Delete it', danger: true,
+        })) return;
+        const res = await deleteAccountData();
+        if (!res.ok) { toast(res.error || 'Could not delete. Try again.'); return; }
+        await logOut();
+        toast('Account data deleted. Your work on this device is untouched.');
         rerender();
       });
 

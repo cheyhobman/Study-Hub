@@ -43,9 +43,8 @@ export function confirmAction({
     document.body.appendChild(root);
     document.body.classList.add('auth-open');
     document.getElementById('app')?.setAttribute('aria-hidden', 'true');
-    /* Forced reflow rather than requestAnimationFrame: rAF does not fire in a
-       background tab, and the dialog starts at opacity 0. */
-    void root.offsetWidth;
+    /* Visible as soon as it is in the DOM; the entrance is a keyframe, not a
+       transition, so nothing can leave it stuck invisible. */
     root.classList.add('is-open');
 
     const done = (val) => {

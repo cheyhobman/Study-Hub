@@ -252,7 +252,19 @@ export const store = {
 
   hasPersonalRecord() { return read('personalrecord', false); },
   recordOfferDismissed() { return read('recordoffer.skip', false); },
-  dismissRecordOffer() { write('recordoffer.skip', true); emit(); },
+  dismissRecordOffer() { write('recordoffer.skip', true); this.markUsed(); emit(); },
+
+  /* ---- has this student ever used the Progress page? ----
+     The first-run screen ("Which subjects are you taking?") must only ever show
+     to somebody who has genuinely never used it. It used to be inferred from
+     "no credits, no extras, nothing hidden", which is ALSO the exact state you
+     are in one second after pressing Reset to blank — so a reset hid the whole
+     credit table and offered a picker containing only the 24 catalogue
+     subjects. The six taught subjects are not in that catalogue, so they looked
+     deleted and could not be added back. This flag makes the two states
+     distinguishable. */
+  hasUsedProgress() { return read('progress.used', false); },
+  markUsed() { if (!read('progress.used', false)) write('progress.used', true); },
   loadPersonalRecord({ record, qualification, internalStatus }) {
     const credits = this.creditRecords();
     Object.entries(record || {}).forEach(([k, v]) => {
@@ -269,6 +281,7 @@ export const store = {
       write('internals', all);
     }
     write('personalrecord', true);
+    this.markUsed();
     emit();
   },
   clearPersonalRecord() {
@@ -283,6 +296,7 @@ export const store = {
     write('personalrecord', false);
     write('internals', []);
     write('seeddates.v1', false);      // let the shipped dates seed again
+    this.markUsed();
     emit();
   },
   /* The headline NZQA panel: blank shipped values, overridden once loaded. */
@@ -291,6 +305,7 @@ export const store = {
   creditRecords() { return read('credits', {}); },
   creditRecord(id) { return this.creditRecords()[id] || null; },
   setCreditRecord(id, rec) {
+    this.markUsed();
     const all = this.creditRecords();
     if (rec === null) delete all[id]; else all[id] = rec;
     write('credits', all);
@@ -360,6 +375,7 @@ export const store = {
   hiddenStandards() { return read('hiddenstds', []); },
   isStandardHidden(k) { return this.hiddenStandards().includes(k); },
   hideStandard(k) {
+    this.markUsed();
     const all = new Set(this.hiddenStandards()); all.add(k);
     write('hiddenstds', [...all]); emit();
   },
@@ -496,6 +512,11 @@ export const store = {
      rather than whatever you last happened to click. Null until starred, and
      the default (whatever the OS prefers) is shown because nothing is starred,
      not because it is. */
+  /* The copy displaced by a sync conflict, kept so last-write-wins is recoverable. */
+  stashConflict(v) { write('conflictcopy', v); },
+  conflictCopy() { return read('conflictcopy', null); },
+  clearConflictCopy() { write('conflictcopy', null); emit(); },
+
   favTheme() { return read('favtheme', null); },
   isFavTheme(id) { return this.favTheme() === id; },
   setFavTheme(id) { write('favtheme', id); write('theme', id); emit(); },
@@ -567,7 +588,7 @@ export const store = {
            browser last changed. Carrying it in a backup or a cloud payload
            would let one device's clock overwrite another's idea of who is
            newer, which is exactly the comparison it exists to make. */
-        if (short === 'lastwrite') continue;
+        if (short === 'lastwrite' || short === 'conflictcopy') continue;
         data[short] = localStorage.getItem(k);
       }
     } catch (e) {}

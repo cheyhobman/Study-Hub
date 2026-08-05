@@ -169,10 +169,18 @@ right of the editor, or press Ctrl/Cmd + Enter).
 --    updated_at  when it last changed. The site uses this to work out whether
 --                this browser or the account holds the newer copy.
 create table if not exists public.user_data (
-  user_id    uuid primary key references auth.users(id) on delete cascade,
-  data       jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  data         jsonb not null default '{}'::jsonb,
+  updated_at   timestamptz not null default now(),
+  -- Which device last wrote, e.g. "Mac · Chrome". Shown on the account page so
+  -- you can tell where a sync came from. Nothing identifying is stored.
+  device_label text
 );
+
+-- Safe to re-run if you created the table before this column existed:
+alter table public.user_data add column if not exists device_label text;
+-- ⚠️ OPTIONAL. Without it the site still syncs perfectly; it just cannot show
+--    "last saved from Mac · Chrome" on the account page.
 
 -- 2. TURN THE LOCK ON.
 --    With RLS enabled and no policies, NOBODY can read anything, not even you.

@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+  <!-- ⚠️ EVERY asset path below must start with "/". Routing is history-based,
+       so the page can legitimately be served at /subject/chemistry — and a
+       relative href like "css/styles.css" resolves against THAT, giving
+       /subject/css/styles.css, which does not exist. The result was a totally
+       dead page on reload: no stylesheet, no script, nothing. Root-absolute
+       paths resolve the same from every route. -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NCEA L3 Study Hub</title>
@@ -21,8 +27,8 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"
           integrity="sha384-D1seVL2iPCxAOR7fZmqQjLGKKKZ26MZ0PPfoBn8SFAowGDb4LWZxc7NeJ0zXTRDW" crossorigin="anonymous"></script>
 
-  <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/print.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/print.css" />
 
   <!-- Set theme before paint to avoid a flash of the wrong theme -->
   <script>
@@ -126,37 +132,104 @@
 
       <main class="content" id="content" tabindex="-1">
         <!-- Views rendered here by the router -->
-        <!-- FIRST PAINT ONLY. This is what shows between the HTML arriving and
-             the JavaScript booting, so it has to be plain markup with no script
-             behind it. It was a bare "Loading…" line, which is exactly the
-             "blank space or bare loading text" the skeletons exist to avoid —
-             the router's skeletons only apply to navigation, never to the very
-             first load. Same shapes and same .sk classes as those, so the swap
-             to real content is continuous. -->
-        <div class="content-inner sk-wrap" aria-busy="true">
-          <span class="sr-only">Loading</span>
-          <div class="sk-head">
-            <div class="sk" style="width:6rem;height:11px"></div>
-            <div class="sk" style="width:55%;height:40px"></div>
-            <div class="sk" style="width:88%;height:14px"></div>
-            <div class="sk" style="width:64%;height:14px"></div>
-          </div>
-          <div class="sk-body">
-            <div class="stat-row sk-stat-row">
-              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
-              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
-              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
-              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
-            </div>
-            <div class="card sk-card-real">
-              <div class="sk" style="width:9rem;height:18px"></div>
-              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
-              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
-              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
-            </div>
-          </div>
-        </div>
+        <!-- FIRST PAINT ONLY: filled by the inline script below. Left empty
+             here so there is never a wrong-shaped skeleton in the markup. -->
+        <div class="content-inner" id="boot-skeleton" aria-busy="true"></div>
       </main>
+      <script>
+      /* FIRST-PAINT SKELETON. Deliberately a plain inline script, not a module:
+         it has to run before anything is imported, which is exactly the gap the
+         skeleton exists to fill. It mirrors the shapes in js/router.js — the
+         duplication is the price of having no dependencies at this point.
+
+         Route-aware, because a dashboard-shaped skeleton in front of the
+         Progress page is worse than none: it promises the wrong layout and then
+         everything moves when the real page lands. */
+      (function () {
+        var host = document.getElementById('boot-skeleton');
+        if (!host) return;
+        var p = (location.pathname || '/').split('/').filter(Boolean)[0] || '';
+        var bar = function (w, h, extra) {
+          return '<div class="sk" style="width:' + w + ';height:' + h + 'px;' + (extra || '') + '"></div>';
+        };
+        var tiles = function (n) {
+          var out = '';
+          for (var i = 0; i < n; i++) out += '<div class="stat-tile sk-tile-real">'
+            + bar('3.2rem', 30) + bar('80%', 11) + '</div>';
+          return '<div class="stat-row sk-stat-row">' + out + '</div>';
+        };
+        var rows = function (n, cols) {
+          var out = '';
+          for (var i = 0; i < n; i++) {
+            var c = '';
+            for (var j = 0; j < cols.length; j++) c += bar(cols[j], 13);
+            out += '<div class="sk-tr">' + c + '</div>';
+          }
+          return out;
+        };
+        var card = function (inner) { return '<div class="card sk-card-real">' + inner + '</div>'; };
+        var head = '<div class="sk-head">' + bar('6rem', 11) + bar('55%', 40)
+                 + bar('88%', 14) + bar('64%', 14) + '</div>';
+        var tabs = '<div class="sk sk-tabs"></div>';
+        var crumbs = '<div class="sk sk-crumbs"></div>';
+
+        var body;
+        if (p === 'progress') {
+          body = tiles(4)
+            + '<div class="sk-two">'
+              + card(bar('11rem', 18) + '<div class="sk sk-donut"></div>' + bar('80%', 11))
+              + card(bar('4rem', 18) + bar('100%', 38) + bar('90%', 11) + bar('60%', 30))
+            + '</div>'
+            + card(bar('9rem', 18) + rows(8, ['19%', '32%', '8%', '15%', '10%']));
+        } else if (p === 'calendar') {
+          var cells = '';
+          for (var i = 0; i < 42; i++) cells += '<div class="sk sk-cell"></div>';
+          body = card(bar('9rem', 16) + '<div class="sk-cal-grid">' + cells + '</div>');
+        } else if (p === 'internals' || p === 'exams') {
+          body = tiles(4) + card(bar('8rem', 18) + rows(6, ['26%', '35%', '12%', '9%']));
+        } else if (p === 'subject') {
+          var g = '';
+          for (var i = 0; i < 6; i++) g += card(bar('55%', 16) + bar('100%', 11) + bar('85%', 11) + bar('40%', 24));
+          body = tiles(3) + '<div class="sk-grid">' + g + '</div>';
+        } else if (p === 'topic') {
+          var blocks = '';
+          for (var i = 0; i < 3; i++) blocks += card(bar('45%', 20) + bar('100%', 14) + bar('97%', 14) + bar('88%', 14) + bar('60%', 14));
+          body = '<div class="sk-topic"><div class="sk-topic-main">' + blocks + '</div>'
+               + '<div class="sk-topic-rail">' + card(bar('60%', 12) + bar('90%', 11) + bar('80%', 11) + bar('85%', 11)) + '</div></div>';
+        } else if (p === 'revise') {
+          var chips = '';
+          for (var i = 0; i < 7; i++) chips += '<div class="sk sk-chip"></div>';
+          body = card(bar('10rem', 16) + '<div class="sk-chips">' + chips + '</div>'
+               + bar('12rem', 40, 'margin-top:22px;border-radius:999px'));
+        } else {
+          /* dashboard and anything else: hero, what's coming, snapshot */
+          var hstats = '';
+          for (var i = 0; i < 3; i++) hstats += '<div>' + bar('3rem', 28) + bar('5rem', 10) + '</div>';
+          var due = '';
+          for (var i = 0; i < 4; i++) due += '<div class="due-item sk-due-item">'
+            + '<span class="sk sk-dot"></span><span class="sk-due-main">'
+            + bar('70%', 13) + bar('45%', 10) + '</span><span class="sk sk-pill"></span></div>';
+          body = '<div class="sk-hero">' + bar('50%', 34) + bar('70%', 13)
+               + '<div class="sk-hero-stats">' + hstats + '</div>'
+               + bar('12rem', 42, 'border-radius:999px;margin-top:20px') + '</div>'
+               + card(bar('9rem', 18) + '<div class="due-list sk-due">' + due + '</div>')
+               + card(bar('7rem', 16) + rows(3, ['26%', '42%', '14%']));
+        }
+
+        var TABBED = { internals: 1, calendar: 1, exams: 1 };
+        var CRUMBED = { subject: 1, topic: 1, reference: 1 };
+        var furniture = (p === '' || p === 'flagged') ? ''
+          : (TABBED[p] ? tabs : CRUMBED[p] ? crumbs : '')
+            + (p === 'topic' ? '<div class="sk-head sk-head-tall">' + bar('6rem', 11)
+                 + bar('60%', 40) + bar('90%', 14) + bar('75%', 14) + bar('50%', 14)
+                 + '</div><div class="sk sk-toolbar"></div>'
+               : head);
+
+        host.className = 'content-inner sk-wrap';
+        host.innerHTML = '<span class="sr-only">Loading</span>' + furniture
+                       + '<div class="sk-body">' + body + '</div>';
+      })();
+      </script>
     </div>
   </div>
 
@@ -164,6 +237,6 @@
   <div class="toast" id="toast"></div>
 
   <!-- App entry point (ES modules) -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 </html>

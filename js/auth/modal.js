@@ -177,12 +177,9 @@ export function openAuth(v = 'login', next = {}) {
   document.body.classList.add('auth-open');
   /* Hide the page from assistive tech while the dialog owns the screen. */
   document.getElementById('app')?.setAttribute('aria-hidden', 'true');
-  /* Force a reflow, then add the class synchronously. requestAnimationFrame
-     does not fire in a background or hidden tab, and the dialog starts at
-     opacity 0 — so an rAF-gated class could leave it permanently invisible. A
-     forced reflow makes the browser commit the starting styles, and the
-     transition still runs from there. */
-  void root.offsetWidth;
+  /* The dialog is visible from the moment it is in the DOM (see the CSS: the
+     entrance is a keyframe animating FROM hidden, not a transition TO visible).
+     This class is kept only so anything else can style the open state. */
   root.classList.add('is-open');
   wire();
   setTimeout(() => root.querySelector('input, button:not([data-close])')?.focus(), 60);

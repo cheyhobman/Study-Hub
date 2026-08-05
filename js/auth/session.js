@@ -42,6 +42,8 @@ let syncState = 'idle';
 const syncListeners = new Set();
 export const onSync = (fn) => { syncListeners.add(fn); fn(syncState); return () => syncListeners.delete(fn); };
 export const syncStatus = () => syncState;
+/** False if the optional device_label column is not in the database. */
+export const deviceColumnPresent = () => hasDeviceColumn;
 function setSync(state) {
   syncState = state;
   syncListeners.forEach(fn => { try { fn(state); } catch (e) { console.error(e); } });
@@ -90,21 +92,57 @@ export async function initAuth() {
 
 /* ---- the cloud copy ------------------------------------------------------ */
 
+/* ---- which device is this? ------------------------------------------------
+   "Saved to your account" never said WHERE from. If two devices disagree you
+   could not tell which one last wrote, which is the one fact you need to judge
+   whether a sync did the right thing. A stable random id per browser, plus a
+   human label guessed from the user agent. Nothing identifying: no IP, no
+   fingerprinting, just "MacBook · Chrome" so you recognise your own machine. */
+export function deviceLabel() {
+  const ua = navigator.userAgent;
+  const os = /iPhone|iPad/.test(ua) ? 'iPhone/iPad'
+           : /Android/.test(ua)     ? 'Android'
+           : /Mac OS X/.test(ua)    ? 'Mac'
+           : /Windows/.test(ua)     ? 'Windows'
+           : /Linux/.test(ua)       ? 'Linux' : 'This device';
+  const br = /Edg\//.test(ua)      ? 'Edge'
+           : /OPR\//.test(ua)      ? 'Opera'
+           : /Chrome\//.test(ua)   ? 'Chrome'
+           : /Firefox\//.test(ua)  ? 'Firefox'
+           : /Safari\//.test(ua)   ? 'Safari' : 'browser';
+  return `${os} · ${br}`;
+}
+
 /** Everything under the `ncea.` namespace, the same blob the backup file uses. */
 function localSnapshot() {
   const payload = store.exportAll();
   return payload.data;
 }
 
+/* `device_label` is an OPTIONAL column. It was added after the first setup
+   instructions went out, so an existing project may not have it — and a
+   cosmetic "which device synced last" must never be able to break syncing
+   itself. Both calls below try with the column, detect the specific
+   "column does not exist" failure, remember it, and carry on without.
+   Adding the column later needs no code change; the flag just stops being set. */
+let hasDeviceColumn = true;
+const missingColumn = (error) =>
+  error && (error.code === '42703' || /column .*device_label.* does not exist/i.test(error.message || ''));
+
 async function pull() {
   const sb = await client();
   if (!sb || !current) return null;
+  const cols = hasDeviceColumn ? 'data, updated_at, device_label' : 'data, updated_at';
   const { data, error } = await sb
-    .from('user_data')
-    .select('data, updated_at')
-    .eq('user_id', current.id)
-    .maybeSingle();
-  if (error) { console.error('pull failed', error); return null; }
+    .from('user_data').select(cols).eq('user_id', current.id).maybeSingle();
+  if (error) {
+    if (missingColumn(error) && hasDeviceColumn) {
+      hasDeviceColumn = false;
+      return pull();                       // one retry, without the column
+    }
+    console.error('pull failed', error);
+    return null;
+  }
   return data || null;
 }
 
@@ -117,7 +155,13 @@ async function push() {
     data: localSnapshot(),
     updated_at: new Date().toISOString(),
   };
-  const { error } = await sb.from('user_data').upsert(body, { onConflict: 'user_id' });
+  if (hasDeviceColumn) body.device_label = deviceLabel();
+  let { error } = await sb.from('user_data').upsert(body, { onConflict: 'user_id' });
+  if (error && missingColumn(error) && hasDeviceColumn) {
+    hasDeviceColumn = false;
+    delete body.device_label;
+    ({ error } = await sb.from('user_data').upsert(body, { onConflict: 'user_id' }));
+  }
   if (error) {
     console.error('push failed', error);
     setSync('error');
@@ -188,11 +232,24 @@ async function reconcile() {
   const localAt = Number(store.lastLocalWrite() || 0);
 
   if (!localHas || remoteAt >= localAt) {
+    /* About to replace local work with the account's copy. If there WAS local
+       work, stash it first: last-write-wins is a reasonable default, but
+       silently destroying the losing side is not. The student can download it
+       from the account page for as long as it is there. */
+    const conflict = localHas && localAt > 0;
+    if (conflict) {
+      store.stashConflict({
+        savedAt: new Date().toISOString(),
+        device: deviceLabel(),
+        data: localSnapshot(),
+      });
+    }
     await applyRemote(remote.data);
-    lastReconcile = { action: 'pulled', conflict: localHas && localAt > 0 };
+    lastReconcile = { action: 'pulled', conflict,
+                      remoteDevice: remote.device_label || null };
   } else {
     await push();
-    lastReconcile = { action: 'pushed-newer-local' };
+    lastReconcile = { action: 'pushed-newer-local', remoteDevice: remote.device_label || null };
   }
   startSync();
   return lastReconcile;
@@ -209,11 +266,6 @@ async function applyRemote(data) {
   }
 }
 
-/** Force an immediate upload. Used by the account page's "sync now". */
-export async function syncNow() {
-  if (!current) return { ok: false, error: 'Not signed in' };
-  return push();
-}
 
 /* ---- auth actions ---------------------------------------------------------
    Every one returns { ok, error?, ...} and never throws, so callers can render
@@ -325,3 +377,21 @@ export function passwordChecks(pw = '') {
   ];
 }
 export const passwordOk = (pw) => passwordChecks(pw).every(c => c.ok);
+
+/* ---- delete account -------------------------------------------------------
+   Two halves, and the order matters. The row goes first: while the session is
+   still valid, RLS lets the student delete their OWN row, which is the data
+   that actually matters. Removing the auth user itself needs admin rights the
+   browser correctly does not have, so that half is a request rather than an
+   action — see SETUP-AUTH.md for the one function that completes it.
+
+   Deleting the cloud copy does NOT touch this browser. Somebody removing their
+   account should not also lose the notes on the machine in front of them. */
+export async function deleteAccountData() {
+  const sb = await client();
+  if (!sb || !current) return { ok: false, error: 'Not signed in.' };
+  const { error } = await sb.from('user_data').delete().eq('user_id', current.id);
+  if (error) return { ok: false, error: friendlyError(error) };
+  stopSync();
+  return { ok: true };
+}

@@ -623,7 +623,8 @@ export function renderProgress() {
      An empty screen should be an invitation, so on a genuinely fresh copy the
      page collapses to one question and the subject picker. Everything else
      appears as soon as there is something to put in it. */
-  const untouched = !store.hasPersonalRecord()
+  const untouched = !store.hasUsedProgress()
+    && !store.hasPersonalRecord()
     && Object.keys(store.creditRecords()).length === 0
     && store.extraStandards().length === 0
     && store.hiddenStandards().length === 0;
@@ -1215,7 +1216,8 @@ export function renderProgress() {
             store.unhideStandard(`${sub.group}:${st.code}`);
             toast(`Restored ${sub.name} ${st.code}`);
           } else {
-            const res = store.addExtraStandard(rowFor(sub, st));
+            store.markUsed();
+          const res = store.addExtraStandard(rowFor(sub, st));
             toast(res.ok ? `Added ${sub.name} ${st.code}` : 'That standard is already on your record');
           }
           rerender();
