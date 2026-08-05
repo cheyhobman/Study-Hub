@@ -104,6 +104,10 @@ export function markActiveNav() {
 function initTheme() {
   // Re-assert the stored theme once modules load, so it survives a reload even
   // if the pre-paint script in index.html was bypassed (e.g. an old cached copy).
+  /* A starred theme wins on every load, so the site always opens in the one you
+     chose rather than the last one you happened to try. */
+  const fav = store.favTheme();
+  if (fav && store.theme() !== fav) store.setTheme(fav);
   document.documentElement.setAttribute('data-theme', store.theme());
 
   const btn = qs('#theme-toggle');
@@ -117,7 +121,20 @@ function initTheme() {
         <span class="tw" style="--a:${t.swatch[0]};--b:${t.swatch[1]}" aria-hidden="true"></span>
         <span class="to-text"><strong>${t.label}</strong><em>${t.hint}</em></span>
         <span class="to-tick" aria-hidden="true">${t.id === cur ? '✓' : ''}</span>
-      </button>`).join('');
+      </button>`).join('') + `
+      <div class="theme-fav-row">
+        <button type="button" class="goal-star theme-star${store.isFavTheme(cur) ? ' is-fav' : ''}"
+                id="theme-fav" aria-pressed="${store.isFavTheme(cur)}"
+                aria-label="${store.isFavTheme(cur) ? 'Starred theme. Click to unstar.' : 'Star this theme so the site always opens in it'}"
+                title="${store.isFavTheme(cur) ? 'Starred: the site opens in this theme' : 'Star this theme so the site always opens in it'}">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 2.9l2.83 5.73 6.32.92-4.57 4.46 1.08 6.3L12 17.34l-5.66 2.97 1.08-6.3L2.85 9.55l6.32-.92z"/>
+          </svg>
+          <i class="gs-spark" aria-hidden="true"></i><i class="gs-spark" aria-hidden="true"></i>
+          <i class="gs-spark" aria-hidden="true"></i><i class="gs-spark" aria-hidden="true"></i>
+        </button>
+        <span class="xs muted">${store.isFavTheme(cur) ? 'Opens in this theme' : 'Star to always open in this theme'}</span>
+      </div>`;
   };
 
   const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
@@ -127,6 +144,18 @@ function initTheme() {
   btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
 
   menu.addEventListener('click', (e) => {
+    /* The star favourites whatever theme is currently applied, exactly like the
+       goal star on Progress: same markup, same animation, same one-at-a-time
+       rule. Clicking a starred star clears it. */
+    const star = e.target.closest('#theme-fav');
+    if (star) {
+      e.stopPropagation();
+      const cur = store.theme();
+      if (store.isFavTheme(cur)) { store.clearFavTheme(); }
+      else { store.setFavTheme(cur); star.classList.add('is-fav', 'is-bursting'); }
+      setTimeout(paint, 620);
+      return;
+    }
     const opt = e.target.closest('[data-theme-id]');
     if (!opt) return;
     store.setTheme(opt.dataset.themeId);

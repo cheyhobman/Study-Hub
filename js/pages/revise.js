@@ -306,7 +306,7 @@ export function renderRevise() {
       <div id="rv-priority" class="callout callout-note" style="margin-bottom:var(--sp-4)">
         <div class="co-icon">⏱</div>
         <div class="co-body"><h4>What gets prioritised</h4>
-          <div id="rv-priority-body" class="small muted">Loading…</div></div>
+          <div id="rv-priority-body" class="small muted"><span class="sk" style="display:inline-block;width:70%;height:12px"></span></div></div>
       </div>
 
       <div class="flex gap-3 wrap mt-3">

@@ -272,9 +272,17 @@ export const store = {
     emit();
   },
   clearPersonalRecord() {
+    /* ⚠️ The planner MUST be cleared too. It used to survive a reset, which left
+       the two halves of one record disagreeing: credits back to blank, but 11
+       stale planner internals still sitting there. The Assessments page then
+       showed items whose status matched nothing, and "load my outstanding
+       internals" offered the same standards again, so re-adding looked like a
+       duplicate. Resetting half a record is worse than not resetting at all. */
     write('credits', {});
     write('qualification', null);
     write('personalrecord', false);
+    write('internals', []);
+    write('seeddates.v1', false);      // let the shipped dates seed again
     emit();
   },
   /* The headline NZQA panel: blank shipped values, overridden once loaded. */
@@ -483,6 +491,16 @@ export const store = {
      but it is NOT itself starred by that fact. It can be starred like any other
      goal, and starring anything else replaces the star rather than adding one:
      there is only ever a single favourite. */
+  /* ---- favourite theme ----
+     Same idea as the starred goal: the site opens in this theme every time,
+     rather than whatever you last happened to click. Null until starred, and
+     the default (whatever the OS prefers) is shown because nothing is starred,
+     not because it is. */
+  favTheme() { return read('favtheme', null); },
+  isFavTheme(id) { return this.favTheme() === id; },
+  setFavTheme(id) { write('favtheme', id); write('theme', id); emit(); },
+  clearFavTheme() { write('favtheme', null); emit(); },
+
   favGoal() { return read('favgoal', null); },
   isFavGoal(g) {
     const f = this.favGoal();

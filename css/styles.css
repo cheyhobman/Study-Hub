@@ -2278,7 +2278,11 @@ tr.tbl-subj td .subj-code {
 /* ---- dialog ---------------------------------------------------------------*/
 body.auth-open { overflow: hidden; }
 
-.auth-root { position: fixed; inset: 0; z-index: 200; }
+.auth-root {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--sp-4);
+}
 .auth-backdrop {
   position: absolute; inset: 0;
   background: rgba(6, 18, 12, .62);
@@ -2290,9 +2294,14 @@ body.auth-open { overflow: hidden; }
 .auth-dialog {
   position: relative;
   width: min(420px, calc(100vw - 2 * var(--sp-4)));
-  max-height: calc(100vh - 2 * var(--sp-5));
+  /* Centred in the viewport rather than pushed down from the top by a margin.
+     The old `margin: 8vh auto` plus a max-height meant the sign-up form, which
+     is the tallest view, overflowed and scrolled INSIDE the box — so opening it
+     looked like the dialog jumped. Flex centring plus a tighter max-height
+     keeps every view inside the frame at normal window sizes. */
+  max-height: calc(100dvh - 2 * var(--sp-4));
   overflow-y: auto;
-  margin: max(var(--sp-5), 8vh) auto 0;
+  overscroll-behavior: contain;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
@@ -2306,7 +2315,12 @@ body.auth-open { overflow: hidden; }
 .auth-close { position: absolute; top: 10px; right: 10px; }
 .auth-dialog h2 { font-family: var(--font-display); font-size: var(--fs-xl); margin-bottom: var(--sp-2); }
 .auth-lede { color: var(--muted); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
-.auth-dialog .field { margin-bottom: var(--sp-4); }
+.auth-dialog .field { margin-bottom: var(--sp-3); }
+.auth-dialog h2 + .auth-lede { margin-bottom: var(--sp-4); }
+.auth-dialog .pw-checks { margin: 0 0 var(--sp-3); }
+.auth-dialog .auth-or { margin: var(--sp-3) 0; }
+.auth-dialog .auth-foot { margin-top: var(--sp-4); padding-top: var(--sp-3); }
+.auth-dialog .auth-note { margin-top: var(--sp-3); }
 .btn-block { width: 100%; justify-content: center; margin-top: var(--sp-2); }
 
 .auth-error {
@@ -2372,3 +2386,36 @@ body.auth-open { overflow: hidden; }
 .acct-sync[data-state="error"]  { color: var(--warn); }
 .acct-sync:empty { display: none; }
 .flex.items-center > .acct-sync { padding: 0; }
+
+/* ---- favourite theme star + read-only credits ---------------------------- */
+.theme-fav-row {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  margin-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+.theme-star { flex: 0 0 auto; margin-left: 0; }
+
+/* Credits come from NZQA, so they are a fact rather than a field. Shown with
+   the same tabular alignment the input had, minus the affordance to edit. */
+.cr-credits-fixed {
+  display: inline-block; min-width: 2.2rem; text-align: center;
+  font-family: var(--font-figure); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm); color: var(--text);
+}
+
+/* ---- site confirm dialog -------------------------------------------------- */
+.confirm-dialog { width: min(430px, calc(100vw - 2 * var(--sp-4))); }
+.confirm-body { color: var(--muted); font-size: var(--fs-sm); }
+.confirm-body p { margin-bottom: var(--sp-3); }
+.confirm-body p:last-child { margin-bottom: 0; }
+.confirm-actions {
+  display: flex; gap: var(--sp-3); justify-content: flex-end;
+  margin-top: var(--sp-5); flex-wrap: wrap;
+}
+.btn-danger { background: var(--bad); color: #fff; border-color: var(--bad); }
+.btn-danger:hover { filter: brightness(1.08); }
+@media (max-width: 480px) {
+  .confirm-actions { flex-direction: column-reverse; }
+  .confirm-actions .btn { width: 100%; justify-content: center; }
+}

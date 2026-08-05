@@ -1,8 +1,46 @@
 # Changelog
 
-Written for GitHub. Newest first. Each entry says what changed and, where it
-matters, *why*, so a future reader (or a future you) does not have to re-derive
-the reasoning from the diff.
+Written for GitHub. Newest first.
+
+---
+
+## Accounts, exam data and a pile of fixes
+
+**Real user accounts.** Sign up, email verification, log in, password reset and
+Google sign-in, backed by Supabase. Results, subjects and settings sync to the
+account so they follow you between devices; signed out, the site works exactly
+as before on local storage. Row Level Security means a row can only ever be read
+by the account that owns it. Setup lives in `SETUP-AUTH.md`; without keys the
+site runs local-only and the auth buttons stay hidden.
+
+**Every subject has real exam dates.** All 24 catalogue subjects now carry their
+2026 NZQA external and Wellington College derived-grade sittings, up from 6.
+A sitting only appears if you hold an un-removed external in that subject.
+
+**One source of truth for assessments** (`js/assessments.js`). Five views were
+each deriving "what have I got" separately and disagreeing; they are all filters
+over one derivation now.
+
+**Clean URLs.** History routing, so `/progress` not `/#/progress`. Host configs
+for Vercel, Netlify and GitHub Pages ship with the repo.
+
+**Blank slate for new users.** `data/results.js` is course structure only; one
+student's grades moved to `data/my-record.js`, loaded on request.
+
+**ATAR corrected.** Quality is divided by the full 90 credits rather than by
+credits held, so 60 Excellence credits no longer scores the same as 90.
+
+**Fixes:** reset on Progress cleared credits but left the planner behind, which
+made re-adding look like a duplicate; the standards library rebuilt a ~100-entry
+Set once per catalogue standard (175 times per paint); added subjects showed as
+lowercase ids like `aghort`; mobile grid tracks were wider than a phone; delete
+crosses were 20px on touch.
+
+**Other:** skeleton loading across every view including first paint, school
+holidays and study leave on the calendar, subject deletion from Progress,
+rotating dashboard greetings, favourite-star for goals and colour themes,
+credits shown as fixed NZQA values rather than editable fields, and destructive
+confirmations moved from browser dialogs to the site's own.
 
 ---
 

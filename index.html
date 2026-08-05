@@ -126,7 +126,36 @@
 
       <main class="content" id="content" tabindex="-1">
         <!-- Views rendered here by the router -->
-        <div class="content-inner"><p class="muted">Loading…</p></div>
+        <!-- FIRST PAINT ONLY. This is what shows between the HTML arriving and
+             the JavaScript booting, so it has to be plain markup with no script
+             behind it. It was a bare "Loading…" line, which is exactly the
+             "blank space or bare loading text" the skeletons exist to avoid —
+             the router's skeletons only apply to navigation, never to the very
+             first load. Same shapes and same .sk classes as those, so the swap
+             to real content is continuous. -->
+        <div class="content-inner sk-wrap" aria-busy="true">
+          <span class="sr-only">Loading</span>
+          <div class="sk-head">
+            <div class="sk" style="width:6rem;height:11px"></div>
+            <div class="sk" style="width:55%;height:40px"></div>
+            <div class="sk" style="width:88%;height:14px"></div>
+            <div class="sk" style="width:64%;height:14px"></div>
+          </div>
+          <div class="sk-body">
+            <div class="stat-row sk-stat-row">
+              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
+              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
+              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
+              <div class="stat-tile sk-tile-real"><div class="sk" style="width:3.2rem;height:30px"></div><div class="sk" style="width:80%;height:11px"></div></div>
+            </div>
+            <div class="card sk-card-real">
+              <div class="sk" style="width:9rem;height:18px"></div>
+              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
+              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
+              <div class="sk-tr"><div class="sk" style="width:26%;height:13px"></div><div class="sk" style="width:42%;height:13px"></div><div class="sk" style="width:14%;height:13px"></div></div>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   </div>

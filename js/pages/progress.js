@@ -14,6 +14,7 @@
 import { store } from '../store.js';
 import { pageHead } from './common.js';
 import { toast, esc } from '../ui.js';
+import { confirmAction } from '../confirm.js';
 import { results, qualification } from '../../data/results.js';
 import { PERSONAL_RECORD, PERSONAL_QUALIFICATION, PERSONAL_INTERNAL_STATUS } from '../../data/my-record.js';
 import { catalogue, AREAS } from '../../data/nzqa-catalogue.js';
@@ -592,7 +593,7 @@ export function renderProgress() {
                stroke-width="2.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
         </button>
       </td></tr>` +
-      gr.map(r => `<tr data-key="${keyOf(r)}">
+      gr.map(r => `<tr data-key="${keyOf(r)}" data-credits="${r.credits}">
         <td class="nowrap"><span class="mono xs">${r.subject} ${r.code}</span>
           <br><span class="badge ${r.assess === 'External' ? 'badge-ext' : 'badge-int'}" style="font-size:.62rem;padding:1px 7px">${r.assess || '–'}</span>
           ${r.as ? `<br><span class="xs muted">AS ${r.as}</span>` : ''}</td>
@@ -600,7 +601,7 @@ export function renderProgress() {
           ${r.resit ? '<br><span class="badge badge-flag">re-sitting Nov 2026 to lift the grade</span>' : ''}
           ${r.topicId ? `<br><a class="xs" href="/topic/${r.topicId}" data-link>study this →</a>` : ''}
 </td>
-        <td><input class="cr-credits sa-input" type="number" min="0" max="30" value="${r.credits}" aria-label="Credits"></td>
+        <td><span class="cr-credits-fixed" title="Credit values come from NZQA and are fixed">${r.credits}</span></td>
         <td><select class="cr-status sa-input" aria-label="Status" title="${STATUS_HINT[r.status] || ''}">
           ${Object.entries(STATUS_LABEL).map(([k, v]) => `<option value="${k}" title="${STATUS_HINT[k] || ''}"${r.status === k ? ' selected' : ''}>${v}</option>`).join('')}
         </select></td>
@@ -976,7 +977,9 @@ export function renderProgress() {
         const save = () => {
           const status = tr.querySelector('.cr-status').value;
           const grade = tr.querySelector('.cr-grade').value;
-          const credits = parseInt(tr.querySelector('.cr-credits').value, 10) || 0;
+          /* Credits are NZQA's, not the student's, so they are displayed rather
+             than edited. Read from the row's own record instead of an input. */
+          const credits = Number(tr.dataset.credits) || 0;
           store.setCreditRecord(k, { status, grade: status === 'achieved' ? grade : '', credits });
         };
         /* Changing the status away from "graded" clears the grade. Leaving a
@@ -987,7 +990,7 @@ export function renderProgress() {
           if (e.target.value !== 'achieved') tr.querySelector('.cr-grade').value = '';
           save(); rerender();
         });
-        ['.cr-grade', '.cr-credits'].forEach(sel =>
+        ['.cr-grade'].forEach(sel =>
           tr.querySelector(sel).addEventListener('change', () => { save(); rerender(); }));
       });
 
@@ -1051,7 +1054,7 @@ export function renderProgress() {
         document.getElementById('reset-credits')?.click();
       });
 
-      document.getElementById('reset-credits')?.addEventListener('click', () => {
+      document.getElementById('reset-credits')?.addEventListener('click', async () => {
         /* The old label said "reset to my NZQA record", which described the
            behaviour of an earlier build where results.js shipped with a real
            record in it. It ships blank now, so this button clears everything,
@@ -1062,7 +1065,15 @@ export function renderProgress() {
           + `This clears ${edits || 'all'} grade${edits === 1 ? '' : 's'} and status${edits === 1 ? '' : 'es'} you have entered`
           + (hidden ? `, and brings back the ${hidden} standard${hidden === 1 ? '' : 's'} you removed` : '')
           + '. Your subjects stay; only the results are cleared. This cannot be undone.';
-        if (!confirm(msg)) return;
+        if (!await confirmAction({
+          title: 'Reset everything back to blank?',
+          body: `<p>This clears <strong>${edits || 'all'}</strong> grade${edits === 1 ? '' : 's'}
+                 and status${edits === 1 ? '' : 'es'} you have entered, and empties your
+                 Assessments list${hidden ? `. It also brings back the ${hidden} standard${hidden === 1 ? '' : 's'} you removed` : ''}.</p>
+                 <p class="xs muted">Your subjects stay. This cannot be undone, so take a backup
+                 first if you are unsure.</p>`,
+          confirmLabel: 'Reset to blank', danger: true,
+        })) return;
         store.clearPersonalRecord();
         store.showAllStandards();
         toast('Reset to blank');
@@ -1236,15 +1247,21 @@ export function renderProgress() {
          already built for that: the subject leaves the sidebar, the Assessments
          page, the calendar, What's coming, the exam timetable and every credit
          total, and comes back from the bottom of the add list. */
-      document.getElementById('credit-table')?.addEventListener('click', (e) => {
+      document.getElementById('credit-table')?.addEventListener('click', async (e) => {
         const sub = e.target.closest('[data-remove-subject]');
         if (!sub) return;
         const g = sub.dataset.removeSubject;
         const mine = rows.filter(r => r.group === g);
         const name = (mine[0] && mine[0].subject) || g;
-        if (!confirm(`Remove ${name} and all ${mine.length} of its standards?\n\n`
-          + 'Its credits, assessments and exam dates come off every page. You can put it back '
-          + 'from the bottom of the add-a-subject list at any time.')) return;
+        if (!await confirmAction({
+          title: `Remove ${name}?`,
+          body: `<p>All <strong>${mine.length}</strong> of its standards come off every page: your
+                 credits, the Assessments list, the calendar, What's coming and the exam
+                 timetable.</p>
+                 <p class="xs muted">You can put it back from the bottom of the add-a-subject
+                 list at any time. Nothing is permanently deleted.</p>`,
+          confirmLabel: `Remove ${esc(name)}`, danger: true,
+        })) return;
         mine.forEach(r => {
           const k = keyOf(r);
           store.hideStandard(k);
@@ -1267,9 +1284,14 @@ export function renderProgress() {
 
 
 
-      document.getElementById('clear-extras')?.addEventListener('click', () => {
+      document.getElementById('clear-extras')?.addEventListener('click', async () => {
         const n = store.extraStandards().length;
-        if (!confirm(`Remove all ${n} standards you added? Your own NZQA record is not touched.`)) return;
+        if (!await confirmAction({
+          title: `Remove all ${n} added standards?`,
+          body: `<p>Only the standards you added from the catalogue are removed. The six taught
+                 subjects are untouched.</p>`,
+          confirmLabel: 'Remove them', danger: true,
+        })) return;
         store.extraStandards().forEach(r => store.removeExtraStandard(r.group, r.code));
         toast(`Removed ${n} added standards`);
         rerender();
