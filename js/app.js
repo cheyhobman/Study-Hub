@@ -13,6 +13,7 @@ import { initRouter, renderRoute } from './router.js';
 import { initAuth } from './auth/session.js';
 import { initAuthUI } from './auth/ui.js';
 import { initSearch } from './search.js';
+import { initSpeedInsights } from './speed-insights.js';
 
 /* ------------------------------------------------- build the sidebar nav */
 /* Brand strapline comes from the profile, so a handed-on copy needs no HTML
@@ -220,6 +221,7 @@ function boot() {
   initMobileMenu();
   initAnchors();
   initSearch();
+  initSpeedInsights();
 
   refreshSidebar();             // NOTE: opening the site no longer ticks the
                                 // streak, see store.recordStudy()
