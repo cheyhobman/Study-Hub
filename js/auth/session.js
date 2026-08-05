@@ -35,6 +35,18 @@ let syncTimer = null;
 let lastPushedAt = 0;
 let suppressPush = false;    // true while we are applying a pull
 
+/* 'idle' | 'saving' | 'saved' | 'error'. Reported in the UI instead of a
+   "Sync now" button: syncing is automatic, so the useful thing to show is
+   whether it is working, not a control for something that already happens. */
+let syncState = 'idle';
+const syncListeners = new Set();
+export const onSync = (fn) => { syncListeners.add(fn); fn(syncState); return () => syncListeners.delete(fn); };
+export const syncStatus = () => syncState;
+function setSync(state) {
+  syncState = state;
+  syncListeners.forEach(fn => { try { fn(state); } catch (e) { console.error(e); } });
+}
+
 /** Subscribe to sign-in / sign-out. Returns an unsubscribe function. */
 export function onAuth(fn) {
   listeners.add(fn);
@@ -99,14 +111,20 @@ async function pull() {
 async function push() {
   const sb = await client();
   if (!sb || !current) return { ok: false };
+  setSync('saving');
   const body = {
     user_id: current.id,
     data: localSnapshot(),
     updated_at: new Date().toISOString(),
   };
   const { error } = await sb.from('user_data').upsert(body, { onConflict: 'user_id' });
-  if (error) { console.error('push failed', error); return { ok: false, error }; }
+  if (error) {
+    console.error('push failed', error);
+    setSync('error');
+    return { ok: false, error };
+  }
   lastPushedAt = Date.now();
+  setSync('saved');
   return { ok: true };
 }
 
@@ -121,16 +139,11 @@ let unsubscribeStore = null;
 function startSync() {
   if (unsubscribeStore) return;
   unsubscribeStore = store.on(schedulePush);
-  /* A tab closing mid-debounce would otherwise lose the last edit. */
-  window.addEventListener('beforeunload', () => {
-    if (current && !suppressPush) navigator.sendBeacon
-      ? void 0            // sendBeacon cannot carry the auth header; the
-      : void 0;           // debounce below is short enough that this is rare
-  });
 }
 function stopSync() {
   clearTimeout(syncTimer);
   if (unsubscribeStore) { unsubscribeStore(); unsubscribeStore = null; }
+  setSync('idle');
 }
 
 /* ---- reconcile ----------------------------------------------------------- */
@@ -201,8 +214,6 @@ export async function syncNow() {
   if (!current) return { ok: false, error: 'Not signed in' };
   return push();
 }
-
-export const lastSyncedAt = () => lastPushedAt;
 
 /* ---- auth actions ---------------------------------------------------------
    Every one returns { ok, error?, ...} and never throws, so callers can render

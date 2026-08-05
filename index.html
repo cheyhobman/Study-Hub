@@ -99,8 +99,13 @@
 
         <div class="search-wrap">
           <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" class="search-input" id="search-input" placeholder="Search all subjects, topics, formulas…" autocomplete="off" aria-label="Search" />
-          <span class="search-kbd">/</span>
+          <!-- The bare "/" badge that used to sit here was a keyboard-shortcut
+               hint borrowed from GitHub. The shortcut still works, but the badge
+               meant nothing unless you already knew the convention, so it is a
+               tooltip now instead of permanent furniture. -->
+          <input type="text" class="search-input" id="search-input"
+                 placeholder="Search all subjects, topics, formulas…" autocomplete="off"
+                 aria-label="Search" title="Search. Tip: press / anywhere to jump here." />
           <div class="search-results" id="search-results" role="listbox"></div>
         </div>
 

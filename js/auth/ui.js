@@ -8,8 +8,10 @@
    ========================================================================== */
 import { esc, toast } from '../ui.js';
 import { authConfigured } from './config.js';
-import { onAuth, user, displayName, logOut, syncNow, lastSyncedAt, reconcileResult } from './session.js';
-import { openAuth, setView } from './modal.js';
+import { onAuth, displayName, logOut, onSync, reconcileResult } from './session.js';
+import { openAuth } from './modal.js';
+
+let unsubSync = null;
 
 function initials(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -48,8 +50,8 @@ function render(u) {
           <span class="xs muted">${esc(u.email || '')}</span>
         </div>
         <a class="acct-item" href="/account" data-link role="menuitem">Account settings</a>
-        <button class="acct-item" id="acct-sync" role="menuitem">Sync now</button>
         <button class="acct-item acct-danger" id="acct-out" role="menuitem">Log out</button>
+        <p class="acct-sync" id="acct-sync-state" aria-live="polite"></p>
       </div>
     </div>`;
 
@@ -65,11 +67,19 @@ function render(u) {
   document.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-  host.querySelector('#acct-sync').onclick = async () => {
-    close();
-    const res = await syncNow();
-    toast(res.ok ? 'Saved to your account' : 'Could not sync. Your work is still saved on this device.');
-  };
+  /* Status, not a button. Syncing is automatic on every change, so a "Sync
+     now" control was asking the student to do something the site already does.
+     What is actually worth knowing is whether it is working. */
+  const stateEl = host.querySelector('#acct-sync-state');
+  const LABEL = { idle: 'Saved on this device', saving: 'Saving…',
+                  saved: 'Saved to your account',
+                  error: 'Offline. Saved here, will sync when reconnected.' };
+  if (unsubSync) unsubSync();
+  unsubSync = onSync((state) => {
+    if (!stateEl.isConnected) return;
+    stateEl.textContent = LABEL[state] || '';
+    stateEl.dataset.state = state;
+  });
   host.querySelector('#acct-out').onclick = async () => {
     close();
     await logOut();

@@ -3,10 +3,10 @@
    Shows every topic flagged across all subjects, grouped by subject, with a
    one-click unflag. Also surfaces reviewed topics for a quick progress recap.
    ========================================================================== */
-import { subjects, standardByTopicId, subjectIdForTopic, subjectById } from '../registry.js';
+import { subjects, standardByTopicId, subjectIdForTopic } from '../registry.js';
 import { store } from '../store.js';
 import { pageHead, stdBadges, sectionTabs} from './common.js';
-import { toast, icons } from '../ui.js';
+import { toast } from '../ui.js';
 
 export function renderFlagged() {
   const flagged = store.flaggedIds();

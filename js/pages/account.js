@@ -26,8 +26,7 @@
 import { store } from '../store.js';
 import { authConfigured } from '../auth/config.js';
 import { signedIn, user, displayName, updateProfile, updatePassword,
-         passwordChecks, passwordOk, logOut, syncNow } from '../auth/session.js';
-import { openAuth } from '../auth/ui.js';
+         passwordChecks, passwordOk, logOut, syncStatus, onSync } from '../auth/session.js';
 import { pageHead } from './common.js';
 import { toast, esc } from '../ui.js';
 
@@ -47,9 +46,12 @@ export function renderAccount() {
     ${pageHead({
       eyebrow: 'Account',
       title: 'Your details',
-      lede: 'Everything here is stored on this device only. Nothing is uploaded, and nothing is shared.',
+      lede: signedIn()
+        ? 'Saved to your account, so it follows you to any device you log in on.'
+        : 'Everything here is stored on this device only. Nothing is uploaded, and nothing is shared.',
     })}
 
+    ${signedIn() ? '' : `
     <form class="card mb-5" id="acct-details" novalidate>
       <h3 class="mb-3">About you</h3>
       <div class="grid-2">
@@ -70,7 +72,7 @@ export function renderAccount() {
         ${store.hasOwnProfile()
           ? '<button class="btn btn-ghost btn-sm" type="button" id="acct-reset">Reset to default</button>' : ''}
       </div>
-    </form>
+    </form>`}
 
     <div class="card mb-5">
       <h3 class="mb-3">Your course</h3>
@@ -94,16 +96,11 @@ export function renderAccount() {
         </div></div>`;
 
       const u = user();
-      if (!u) return `
-        <div class="card mb-5">
-          <h3 class="mb-2">You are not logged in</h3>
-          <p class="muted small mb-3">Everything you record is saved in this browser. Create an
-            account and it follows you to any device, and your work here comes with it.</p>
-          <div class="flex gap-3 wrap">
-            <button class="btn btn-primary btn-sm" id="acct-open-signup">Create an account</button>
-            <button class="btn btn-ghost btn-sm" id="acct-open-login">Log in</button>
-          </div>
-        </div>`;
+      /* No "you are not logged in" card. The top bar already shows Log in and
+         Sign up when signed out, so a second panel saying the same thing was
+         restating the obvious in the place least likely to need it. Signed out,
+         this section simply is not here and the page is about your local data. */
+      if (!u) return '';
 
       return `
         <form class="card mb-5" id="acct-account" novalidate>
@@ -111,17 +108,22 @@ export function renderAccount() {
           <div class="grid-2">
             <label class="field"><span>Name</span>
               <input name="name" value="${esc(displayName(u))}" autocomplete="name"></label>
-            <label class="field"><span>Email</span>
+            <label class="field"><span>School</span>
+              <input name="school" value="${esc(store.profile().school || '')}"
+                     placeholder="Your school" autocomplete="organization"></label>
+            <label class="field" style="grid-column:1/-1"><span>Email</span>
               <input type="email" name="email" value="${esc(u.email || '')}" autocomplete="email"></label>
           </div>
           <p class="int-error hidden" id="acct-account-err" role="alert"></p>
           <p class="xs muted">Changing your email sends a confirmation to both addresses. It only
             takes effect once you click the link in the new one.</p>
-          <div class="flex gap-3 mt-4 wrap">
+          <div class="flex gap-3 mt-4 wrap items-center">
             <button class="btn btn-primary btn-sm" type="submit">Save changes</button>
-            <button class="btn btn-ghost btn-sm" type="button" id="acct-sync-now">Sync now</button>
             <button class="btn btn-ghost btn-sm" type="button" id="acct-logout">Log out</button>
+            <span class="acct-sync" id="acct-sync-state" aria-live="polite"></span>
           </div>
+          <p class="xs muted mt-3">Your results, subjects and settings save to this account
+            automatically, a second or two after each change. There is nothing to press.</p>
         </form>
 
         <form class="card mb-5" id="acct-pw" novalidate>
@@ -138,14 +140,22 @@ export function renderAccount() {
 
     <div class="card">
       <h3 class="mb-3">Your data</h3>
-      <p class="muted small">Everything you record, your results, deadlines, flashcard boxes and
-        streak, is stored in <strong>this browser on this device</strong>. It is never uploaded and
-        never shared.</p>
-      <p class="muted small mt-3">There is <strong>no download or export</strong>. Results are your own
-        academic record, so nothing here produces a file of them that could be passed on or opened
-        somewhere else. Anyone using their own copy enters their own results.</p>
-      <p class="xs muted mt-3">Clearing your browsing data for this site erases everything, and it
-        cannot be recovered.</p>
+      ${signedIn() ? `
+        <p class="muted small">Your results, deadlines, flashcard boxes and streak are saved to
+          <strong>your account</strong> as well as this browser, so logging in on another device
+          brings everything with you.</p>
+        <p class="muted small mt-3">Only you can read it. The database rule is that a row can be
+          read by the account it belongs to and by nobody else.</p>
+      ` : `
+        <p class="muted small">Everything you record, your results, deadlines, flashcard boxes and
+          streak, is stored in <strong>this browser on this device</strong>. It is not uploaded
+          anywhere and not shared.</p>
+        <p class="xs muted mt-3">Clearing your browsing data for this site erases it, and without a
+          backup it cannot be recovered.</p>
+      `}
+      <p class="muted small mt-3">You can take a copy at any time from
+        <a href="/command-words" data-link>Study tools</a> &rarr; <strong>Back up your data</strong>,
+        and restore it there too. Worth doing while the site is in beta.</p>
     </div>
   </div>`;
 
@@ -186,22 +196,21 @@ export function renderAccount() {
         v.onMount();
       };
 
-      document.getElementById('acct-open-signup')?.addEventListener('click', () => openAuth('signup'));
-      document.getElementById('acct-open-login')?.addEventListener('click', () => openAuth('login'));
-
       document.getElementById('acct-logout')?.addEventListener('click', async () => {
         await logOut();
         toast('Logged out. Your work stays on this device.');
         rerender();
       });
 
-      document.getElementById('acct-sync-now')?.addEventListener('click', async (e) => {
-        e.target.disabled = true;
-        const res = await syncNow();
-        e.target.disabled = false;
-        toast(res.ok ? 'Saved to your account'
-                     : 'Could not sync. Your work is still saved on this device.');
-      });
+      /* Live sync state, rather than a control for something automatic. */
+      const syncEl = document.getElementById('acct-sync-state');
+      if (syncEl) {
+        const LABEL = { idle: '', saving: 'Saving…', saved: 'All changes saved',
+                        error: 'Offline. Saved on this device, will sync when reconnected.' };
+        const paint = (st) => { syncEl.textContent = LABEL[st] || ''; syncEl.dataset.state = st; };
+        paint(syncStatus());
+        onSync(paint);
+      }
 
       const accForm = document.getElementById('acct-account');
       const accErr = document.getElementById('acct-account-err');
@@ -226,7 +235,7 @@ export function renderAccount() {
         }
         /* Keep the local profile in step so the dashboard greeting updates
            without waiting for a round trip. */
-        store.setProfile({ ...store.profile(), name });
+        store.setProfile({ ...store.profile(), name, school: accForm.school.value.trim() });
         toast(res.emailPending
           ? 'Saved. Check your new email to confirm the change.'
           : 'Account updated');

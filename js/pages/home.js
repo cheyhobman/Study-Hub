@@ -18,7 +18,6 @@ import { store } from '../store.js';
 import { esc } from '../ui.js';
 import { upcomingDeadlines, undatedInternals, deadlineCounts, duePill, KINDS } from '../deadlines.js';
 import { wireBackupPanel } from './commandwords.js';
-import { go } from '../router.js';
 /* Reads the STORE, not data/profile.js, so a visitor who sets their own name
    sees it here. store.profile() falls back to the seed file. */
 

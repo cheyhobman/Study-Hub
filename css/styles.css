@@ -472,7 +472,6 @@ img, svg { max-width: 100%; }
 .search-input::placeholder { color: var(--faint); }
 .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: var(--surface); }
 .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--faint); pointer-events: none; }
-.search-kbd { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.7rem; color:var(--faint); border:1px solid var(--border-strong); border-radius:5px; padding:1px 6px; background:var(--surface); }
 
 .search-results {
   position: absolute; top: calc(100% + 8px); left: 0; right: 0;
@@ -1056,8 +1055,7 @@ sup, sub { line-height: 0; }
   .sidebar.open { transform: translateX(0); }
   .menu-toggle { display:grid; }
   .topbar { padding: 0 var(--sp-4); }
-  .search-kbd { display:none; }
-  .content { padding: var(--sp-5) var(--sp-4) var(--sp-7); }
+    .content { padding: var(--sp-5) var(--sp-4) var(--sp-7); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .hero-stats { gap: var(--sp-4); flex-wrap:wrap; }
   .std-row { grid-template-columns: 1fr; gap: var(--sp-3); }
@@ -2360,3 +2358,17 @@ body.auth-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .auth-backdrop, .auth-dialog { transition: none; }
 }
+
+/* ---- account sync status --------------------------------------------------
+   Replaces the old "Sync now" button. Syncing happens automatically on every
+   change, so the useful thing to surface is whether it is working, not a
+   control for something the site already does. */
+.acct-sync {
+  margin: 0; padding: var(--sp-2) var(--sp-3) 0;
+  font-size: var(--fs-xs); color: var(--muted);
+}
+.acct-sync[data-state="saving"] { color: var(--muted); }
+.acct-sync[data-state="saved"]  { color: var(--good); }
+.acct-sync[data-state="error"]  { color: var(--warn); }
+.acct-sync:empty { display: none; }
+.flex.items-center > .acct-sync { padding: 0; }

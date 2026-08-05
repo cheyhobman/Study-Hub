@@ -145,17 +145,6 @@ export function externalsAwaitingDates() {
    Each view calls one of these instead of re-deriving the rule. If a rule ever
    changes, it changes here and every view follows. */
 
-/** Assessments page: everything still to action, internal or external. */
-export function assessmentsPageItems({ keepVisible = new Set() } = {}) {
-  return allAssessments().filter(a => !a.graded || keepVisible.has(a.key));
-}
-
-/** What's coming: internals you still have to hand in, externals always. */
-export function upcomingAssessments() {
-  return allAssessments().filter(a => a.kind === 'external'
-    || !(a.plannerItem && ['submitted', 'graded'].includes(a.plannerItem.status)));
-}
-
 /** True if this planner item's standard is still on the record. */
 export function plannerItemIsLive(item) {
   if (!item || !item.recordKey) return true;   // free-text internals are always live

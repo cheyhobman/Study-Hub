@@ -33,8 +33,8 @@
    is the intended fallback, not a broken state.
    ========================================================================== */
 
-export const SUPABASE_URL  = '';      /* e.g. 'https://abcdefgh.supabase.co' */
-export const SUPABASE_ANON_KEY = '';  /* e.g. 'sb_publishable_...' or 'eyJhbGciOiJI...' */
+export const SUPABASE_URL  = 'https://wbcokcappsrgxczimwed.supabase.co';      /* e.g. 'https://abcdefgh.supabase.co' */
+export const SUPABASE_ANON_KEY = 'sb_publishable_P5v0vMsvRi5DjrPGdls0kQ_60D7KTvk';  /* e.g. 'sb_publishable_...' or 'eyJhbGciOiJI...' */
 
 /** Is the site wired to a backend at all? Everything auth-related checks this
     first, so an unconfigured copy degrades to local-only rather than erroring. */
